@@ -41,4 +41,4 @@ def parse(infile):
     result.shape = (-1,chanCount+1) # WTF, why does assigning change shape
     try:numpy.save(open(cache,'wb'),result)
     except NameError: pass
-    return result
+    return result.transpose()
