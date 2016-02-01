@@ -2,7 +2,8 @@
 #from recipesParser import recipesParser
 import sys,os.path,re
 sys.path.insert(0,os.path.join(os.path.abspath(os.path.dirname(__file__)),'..'))
-from plot import ordered_yaml as yaml
+#from plot import ordered_yaml as yaml
+import yaml
 import matplotlib.pyplot as plt
 from plotter import plot
 
@@ -40,7 +41,8 @@ y[12]?(x[12])? = (operation)?\(src,...),*args,**kwargs
 all other entries are passed to pyplot.figure()
 '''
 
-try: recipes = yaml.ordered_load(open(sys.argv[1]))
+#try: recipes = yaml.ordered_load(open(sys.argv[1]))
+try: recipes = yaml.load(open(sys.argv[1]))
 except (FileNotFoundError,IndexError):
     print(__doc__)
     sys.exit(1)
