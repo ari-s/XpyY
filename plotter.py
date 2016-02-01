@@ -1,11 +1,34 @@
+try:
+    from .packagedefaults import packagedefaults
+    from . import inputfilter, operations
+except SystemError:
+    from packagedefaults import packagedefaults
+    from plot import inputfilter,operations
+import re
 
-import pyparsing,re
-from packagedefaults import packagedefaults
-from plot import inputfilter,operations
-
-def execDraw(src, instructions,p,**plotopts):
+def execCompute(src, instructions):
     '''executes drawing instruction as described in __main__.__doc__'''
-    pass
+    if isinstance(instructions, list):
+
+        if all( isinstance(i, int) for i in instructions ):
+            return ( src[0][i] for i in instructions )
+
+        elif all( isinstance(i, dict) for i in instructions ):
+            return NotImplementedError('did not get here')
+
+    elif isinstance(instructions, dict):
+        if len(instructions) != 1: raise ValueError('instruction length must be one')
+        for operation,operands in instructions.items(): # exactly one loop iteration
+            if isinstance(operands,dict):
+                intermediate = execCompute(src,operands)
+                return operations[operation](intermediate)
+            elif isinstance(operands, list):
+                if all( isinstance(i, dict) for i in operands ):
+                    raise NotImplementedError('did not get here')
+                args = [ src[0][:,i] for i in operands ]
+                return operations[operation](args)
+            else:
+                raise ValueError('Invalid instruction in recipe')
 
 def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     '''plots on fig from one recipe (as python dictionary) as described in __main__.__doc__'''
@@ -51,7 +74,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     ybreak = popset('ybreak')
     src = popset('src')
     plotpos= popset('plotpos',((xlen*ylen),xpos,ypos))
-    subplotopts = popset('subplotopts',{})
+    subplotopts = popset('opts',{})
     target = recipe.pop('target') # no default for target
 
     # parse target, if not shorthand notation extract labels
@@ -68,20 +91,30 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     srcprefix = popset('srcprefix')
     src = [ inputfilter.__call__( srcprefix+i ) for i in src ]
 
+    def subplot(p,recipe):
+        opts = {}
+        for i,v in enumerate(recipe):
+            if isinstance(v,dict):
+                opts.update(v)
+                del(recipe[i])
+        for part in recipe:
+            data = execCompute(src,part[0])
+            p.plot(*data,**opts)
+
     # y1x1 plots
     p11 = fig.add_subplot(*plotpos,**subplotopts)
-    execDraw(src, y1x1,p11,**recipe)
+    subplot(p11,y1x1)
     if labels[0]: p11.set_xlabel(labels[0])
     if labels[1]: p11.set_ylabel(labels[1])
 
     if y2x1:
         p21 = p11.twiny()
-        execDraw( y2x1, p21, **recipe )
+        subplot(p21,y2x1)
         if labels[3]: p21.set_ylabel(labels[3])
 
     if y1x2:
         p12 = p11.twinx()
-        execDraw( y1x2, p12, **recipe )
+        subplot(p12,y1x2)
         if labels[2]: p12.set_xlabel(labels[2])
 
     if y2x2:
