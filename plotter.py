@@ -1,10 +1,17 @@
 try:
     from .packagedefaults import packagedefaults
-    from . import inputfilter, operations
+    from . import inputfilter
+    from .operations import operations
+    from .subplots2 import subplots2
+    
 except SystemError:
     from packagedefaults import packagedefaults
-    from plot import inputfilter,operations
-import re
+    from plot import inputfilter
+    from plot.operations import operations
+    from subplots2 import subplots2
+import re, numbers, copy, numpy
+from matplotlib import pyplot
+import pdb
 
 def execCompute(src, instructions):
     '''executes drawing instruction as described in __main__.__doc__'''
@@ -17,20 +24,20 @@ def execCompute(src, instructions):
             return NotImplementedError('did not get here')
 
     elif isinstance(instructions, dict):
-        if len(instructions) != 1: raise ValueError('instruction length must be one')
-        for operation,operands in instructions.items(): # exactly one loop iteration
-            if isinstance(operands,dict):
-                intermediate = execCompute(src,operands)
-                return operations[operation](intermediate)
-            elif isinstance(operands, list):
-                if all( isinstance(i, dict) for i in operands ):
-                    raise NotImplementedError('did not get here')
-                args = [ src[0][:,i] for i in operands ]
-                return operations[operation](args)
-            else:
-                raise ValueError('Invalid instruction in recipe')
+        kwargs = instructions.pop('args',{})
+        operation,operands = list(instructions.items())[0] #there may only be one
+        if isinstance(operands,dict):
+            intermediate = execCompute(src,operands)
+            return operations[operation](*intermediate, **kwargs)
+        elif isinstance(operands, list):
+            if all( isinstance(i, dict) for i in operands ):
+                raise NotImplementedError('did not get here')
+            args = [ src[0][i] for i in operands ]
+            return operations[operation](*args, **kwargs)
+        else:
+            raise ValueError('Invalid instruction in recipe')
 
-def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
+def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     '''plots on fig from one recipe (as python dictionary) as described in __main__.__doc__'''
 
     def popset(key, default=None, *altnames):
@@ -49,11 +56,34 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
             # altnames[1:] works because slicing with indices outside iterable returns empty iterable
         return v
 
+    target = recipe.pop('target') # no default for target
+    # parse target, if not shorthand notation extract labels
+    if isinstance(target,list):
+        labels = target[2:]
+        target,caption = target[:2]
+    else:
+        labels = list(map(popset,('xlabel','ylabel'),('x1label','y1label')))
+        labels.extend(map(popset,('x2label', 'y2label')))
+
+    if targets and target not in targets:
+        return fig
+    target = popset('targetprefix')+target
+
+    # extract recipe keys that are not plot args
+    subplotopts = popset('opts',{})
+    xbreaks = popset('xbreaks',[None]) # have to have something inside b/c later iterate over
+    ybreaks = popset('ybreaks',[None])
+    src = popset('srcprefix')+popset('src')
+    plotpos= popset('plotpos',((xlen*ylen),xpos,ypos))
+    outformat = popset('format')
+    legendopts = popset('legendopts',{})
+
     # extracting drawing instructions
     plotRe = re.compile(r'(y[12]?)(x[12]?)?')
     y1x1,y2x1,y1x2,y2x2 = [],[],[],[]
+    linelabels = []
     pop=[] #: need to delete drawing instructions from recipe
-    for k in recipe.keys():
+    for k in recipe:
         try:
             y,x = plotRe.match(k).groups() # x may be None
         except AttributeError:
@@ -69,55 +99,135 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
                 else: y1x1.append(p)
     for i in map(recipe.pop,pop): pass
 
-    # extract recipe keys that are not plot args
-    xbreak = popset('xbreak')
-    ybreak = popset('ybreak')
-    src = popset('src')
-    plotpos= popset('plotpos',((xlen*ylen),xpos,ypos))
-    subplotopts = popset('opts',{})
-    target = recipe.pop('target') # no default for target
-
-    # parse target, if not shorthand notation extract labels
-    if isinstance(target,list):
-        labels = target[2:]
-        target,caption = target[:2]
-    else:
-        labels = list(map(popset,('xlabel','ylabel'),('x1label','y1label')))
-        labels.extend(map(popset,('x2label', 'y2label')))
-
     if not isinstance(src,list):
         src = [ src ]
 
-    srcprefix = popset('srcprefix')
-    src = [ inputfilter.__call__( srcprefix+i ) for i in src ]
+    src = [ inputfilter.__call__( i ) for i in src ]
 
-    def subplot(p,recipe):
-        opts = {}
-        for i,v in enumerate(recipe):
-            if isinstance(v,dict):
-                opts.update(v)
-                del(recipe[i])
-        for part in recipe:
-            data = execCompute(src,part[0])
-            p.plot(*data,**opts)
+    def subplot(recipes, *plots):
+        lines = []
+        for recipe in recipes:
+            opts = {}
+            for i,v in enumerate(recipe):
+                if isinstance(v,dict):
+                    if all( isinstance(j,(numbers.Number, str)) for j in v.values()):
+                        print(v)
+                        if 'label' in v:
+                            linelabels.append(v.pop('label'))
+                        opts.update(v)
+                        del(recipe[i])
+            for part in recipe:
+                data = execCompute(src,part)
+                for p in plots:
+                    lines.extend(p.plot(*data,**opts))
+        return lines
 
-    # y1x1 plots
-    p11 = fig.add_subplot(*plotpos,**subplotopts)
-    subplot(p11,y1x1)
-    if labels[0]: p11.set_xlabel(labels[0])
-    if labels[1]: p11.set_ylabel(labels[1])
+    lines = []
 
-    if y2x1:
-        p21 = p11.twiny()
-        subplot(p21,y2x1)
-        if labels[3]: p21.set_ylabel(labels[3])
+    # if we have breaks, come up with a new figure, no way to save the old one -
+    # incompatible with more than one plot per figure
+    if xbreaks[0] or ybreaks[0]:
 
-    if y1x2:
-        p12 = p11.twinx()
-        subplot(p12,y1x2)
-        if labels[2]: p12.set_xlabel(labels[2])
+        # gridspec: alignment of the subplots
+        try: width = [ right-left for left,right in xbreaks ]
+        except TypeError: width = [ 1 ]
+        try: height = [ top-bottom for bottom,top in ybreaks ]
+        except TypeError: height = [ 1 ]
+        
+        gridspec = pyplot.GridSpec(nrows=len(ybreaks), ncols=len(xbreaks), width_ratios=width, height_ratios=height)
+        axs = subplots2(fig, gridspec)
+        pdb.set_trace()
 
-    if y2x2:
-        raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
+        ## plot creation
+        #fig, axs = pyplot.subplots( len(ybreaks), len(xbreaks),
+                                    #sharex='col', sharey='row',
+                                    #squeeze=False,gridspec_kw = gridspec )
 
+        ## the actual draw call
+        #lines.extend(subplot(y1x1,*axs.flat))
+
+        #if y2x1:
+            #twinxs = numpy.array([ ax.twinx() for ax in axs.flat ])
+            #twinxs.shape = axs.shape
+            #lines.extend(subplot(y2x1,*twinxs.flat))
+            #try: labels[3]
+            #except IndexError: pass
+            #else: twinxs[0,-1].set_ylabel(labels[3])
+
+        #elif y1x2:
+            #twinxs = numpy.array([ ax.twiny() for i in axs.flat ])
+            #twinxs.shape = axs.shape
+            #lines.extend(subplot(y1x2,*twinxs.flat))
+            #try: labels[2]
+            #except IndexError: pass
+            #else: twinxs[-1,0].set_xlabel(labels[2])
+
+
+        ## and now removing of in-between stuff...
+        #for i,x in enumerate(xbreaks):
+            #for j,y in enumerate(ybreaks):
+                #if x:   # may have None-case
+                    #axs[j,i].set_xlim(x)
+                    #if y2x1: twinxs[j,i].set_xlim(x)
+                    #if y1x2: twinxs[j,i].set_xlim(x)
+
+                #if y:   # dito
+                    #xs[j,i].set_ylim(y)
+                    #if y2x1: twinxs[j,i].set_ylim(y)
+                    #if y1x2: twinxs[j,i].set_ylim(y)
+
+                #axs[j,i].tick_params(which='both',bottom=False,top=False,left=False,right=False)
+                #if y2x1: twinxs[j,i].tick_params(which='both',bottom=False,top=False,left=False,right=False)
+                #if y1x2: twinxs[j,i].tick_params(which='both',bottom=False,top=False,left=False,right=False)
+
+                #for side in ('top','bottom','left','right'):
+                    #axs[j,i].spines[side].set_visible(False)
+                    #if y2x1: twinxs[j,i].spines[side].set_visible(False)
+                    #if y1x2: twinxs[j,i].spines[side].set_visible(False)
+
+                #axs[j,0].spines['left'].set_visible(True)
+                #axs[j,-1].spines['right'].set_visible(True)
+
+                #axs[j,0].yaxis.tick_left()
+                #if not y2x1: axs[j,-1].tick_params(which='both',right=True,labelright=False)
+                #else: twinxs[j,-1].yaxis.tick_right()
+
+            #axs[ 0,i].spines['top'].set_visible(True)
+            #axs[-1,i].spines['bottom'].set_visible(True)
+
+            #if not y1x2:  axs[ 0,i].tick_params(which='both',top=True,labeltop=False)
+            #else: twinxs[0,i].xaxis.tick_top(True)
+            #axs[ 0,i].xaxis.tick_bottom()
+            #pdb.set_trace()
+
+        #if labels[0]: axs[0,0].set_xlabel=labels[0]
+        #if labels[1]: axs[0,0].set_xlabel=labels[1]
+
+
+    else:
+        # y1x1 plots
+        p11 = fig.add_subplot(*plotpos,**subplotopts)
+        lines.extend(subplot(y1x1,p11))
+        if labels[0]: p11.set_xlabel(labels[0])
+        if labels[1]: p11.set_ylabel(labels[1])
+
+        if y2x1:
+            p21 = p11.twinx()
+            lines.extend(subplot(y2x1,p21))
+            try: labels[3]
+            except IndexError: pass
+            else: p21.set_ylabel(labels[3])
+
+        if y1x2:
+            p12 = p11.twiny()
+            lines.extend(subplot(y1x2,p12))
+            try: labels[2]
+            except IndexError: pass
+            else: p12.set_xlabel(labels[2])
+
+        if y2x2:
+            raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
+        p11.legend(lines,linelabels,**legendopts)
+    fig.tight_layout()
+    fig.savefig(target,format=outformat)
     return fig
