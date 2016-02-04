@@ -2,13 +2,13 @@ try:
     from .packagedefaults import packagedefaults
     from . import inputfilter
     from .operations import operations
-    from .subplots2 import subplots2
+    from .subplots3 import subplots2
     
 except SystemError:
     from packagedefaults import packagedefaults
     from plot import inputfilter
     from plot.operations import operations
-    from subplots2 import subplots2
+    from subplots3 import subplots2
 import re, numbers, numpy
 from matplotlib import pyplot
 import pdb
@@ -18,7 +18,9 @@ def execCompute(src, instructions):
     if isinstance(instructions, list):
 
         if all( isinstance(i, int) for i in instructions ):
-            return ( src[0][i] for i in instructions )
+            # return a list, because that can be reiterated over 
+            # ( necessary for broken axis -> subplots )
+            return [ src[0][i] for i in instructions ]
 
         elif all( isinstance(i, dict) for i in instructions ):
             return NotImplementedError('did not get here')
@@ -122,6 +124,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
                         del(recipe[i])
             for part in recipe:
                 data = execCompute(src,part)
+                #pdb.set_trace()
                 for p in plots:
                     lines.extend(p.plot(*data,**opts))
         return lines
@@ -130,23 +133,22 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
 
     # if we have breaks, come up with a new figure, no way to save the old one -
     # incompatible with more than one plot per figure
-    subplots2args = dict(xbreaks=xbreaks, ybreaks=ybreaks, maxXTicks=maxXTicks, maxYTicks=maxYTicks, alpha=.5)
+    subplots2args = dict(xbreaks=xbreaks, ybreaks=ybreaks, maxXTicks=maxXTicks, maxYTicks=maxYTicks)
     if xbreaks[0] or ybreaks[0]:
         if not ( y2x1 or y1x2 ):
-            axs = subplots2(fig, xlabel=labels[0], ylabel=labels[1], **subplots2args)
+            axs = subplots2(fig, **subplots2args)
         elif y2x1:
-            axs = subplots2(fig, xlabel=labels[0], ylabel=labels[1], ytticks=False, **subplots2args)
-            twinys = subplots2(fig, xlabel=labels[0], ylabel=labels[3], ytticks=False, yaxpos='right', **subplots2args)
-            lines = subplot(y2x1, *twinys.flat) 
-            
+            print(y2x1)
+            axs, twinaxs = subplots2(fig,twin='x', **subplots2args)     
+            lines = subplot(y2x1,*twinaxs.flat)
         elif y1x2:
-            axs = subplots2(fig, xlabel=labels[2], ylabel=labels[1], xtticks=False, **subplots2args)
-            twinys = subplots2(fig, xtticks=False, xaxpos='top', **subplots2args)
-            lines = subplot(y1x2, *twinx.flat)
+            axs, twinaxs = subplots2(fig,twin='y', **subplots2args)
+            lines = subplot(y1x2, *twinaxs.flat)
+        print(y1x1)
+        lines = subplot(y1x1,*axs.flat) + lines
 
         # the actual draw call
         #lines =  subplot(y1x1,*axs.flat)  + lines
-        pdb.set_trace()
 
         #if y2x1:
             #twinxs = subplot
@@ -162,8 +164,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
             #try: labels[2]
             #except IndexError: pass
             #else: twinxs[-1,0].set_xlabel(labels[2])
-
-
 
     else:
         # y1x1 plots
@@ -189,6 +189,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         if y2x2:
             raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
         p11.legend(lines,linelabels,**legendopts)
+        
+
+    #pdb.set_trace()
     fig.tight_layout()
     fig.savefig(target,format=outformat)
     return fig
