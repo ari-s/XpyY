@@ -77,6 +77,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     plotpos= popset('plotpos',((xlen*ylen),xpos,ypos))
     outformat = popset('format')
     legendopts = popset('legendopts',{})
+    maxXTicks = popset('maxXTicks')
+    maxYTicks = popset('maxYTicks')
 
     # extracting drawing instructions
     plotRe = re.compile(r'(y[12]?)(x[12]?)?')
@@ -127,24 +129,12 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     # if we have breaks, come up with a new figure, no way to save the old one -
     # incompatible with more than one plot per figure
     if xbreaks[0] or ybreaks[0]:
-
-        # gridspec: alignment of the subplots
-        try: width = [ right-left for left,right in xbreaks ]
-        except TypeError: width = [ 1 ]
-        try: height = [ top-bottom for bottom,top in ybreaks ]
-        except TypeError: height = [ 1 ]
         
-        gridspec = pyplot.GridSpec(nrows=len(ybreaks), ncols=len(xbreaks), width_ratios=width, height_ratios=height)
-        axs = subplots2(fig, gridspec)
+        axs = subplots2(fig, xbreaks, ybreaks, maxXTicks=maxXTicks, maxYTicks=maxYTicks)
         pdb.set_trace()
 
-        ## plot creation
-        #fig, axs = pyplot.subplots( len(ybreaks), len(xbreaks),
-                                    #sharex='col', sharey='row',
-                                    #squeeze=False,gridspec_kw = gridspec )
-
-        ## the actual draw call
-        #lines.extend(subplot(y1x1,*axs.flat))
+        # the actual draw call
+        lines.extend(subplot(y1x1,*axs.flat))
 
         #if y2x1:
             #twinxs = numpy.array([ ax.twinx() for ax in axs.flat ])
@@ -162,46 +152,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
             #except IndexError: pass
             #else: twinxs[-1,0].set_xlabel(labels[2])
 
-
-        ## and now removing of in-between stuff...
-        #for i,x in enumerate(xbreaks):
-            #for j,y in enumerate(ybreaks):
-                #if x:   # may have None-case
-                    #axs[j,i].set_xlim(x)
-                    #if y2x1: twinxs[j,i].set_xlim(x)
-                    #if y1x2: twinxs[j,i].set_xlim(x)
-
-                #if y:   # dito
-                    #xs[j,i].set_ylim(y)
-                    #if y2x1: twinxs[j,i].set_ylim(y)
-                    #if y1x2: twinxs[j,i].set_ylim(y)
-
-                #axs[j,i].tick_params(which='both',bottom=False,top=False,left=False,right=False)
-                #if y2x1: twinxs[j,i].tick_params(which='both',bottom=False,top=False,left=False,right=False)
-                #if y1x2: twinxs[j,i].tick_params(which='both',bottom=False,top=False,left=False,right=False)
-
-                #for side in ('top','bottom','left','right'):
-                    #axs[j,i].spines[side].set_visible(False)
-                    #if y2x1: twinxs[j,i].spines[side].set_visible(False)
-                    #if y1x2: twinxs[j,i].spines[side].set_visible(False)
-
-                #axs[j,0].spines['left'].set_visible(True)
-                #axs[j,-1].spines['right'].set_visible(True)
-
-                #axs[j,0].yaxis.tick_left()
-                #if not y2x1: axs[j,-1].tick_params(which='both',right=True,labelright=False)
-                #else: twinxs[j,-1].yaxis.tick_right()
-
-            #axs[ 0,i].spines['top'].set_visible(True)
-            #axs[-1,i].spines['bottom'].set_visible(True)
-
-            #if not y1x2:  axs[ 0,i].tick_params(which='both',top=True,labeltop=False)
-            #else: twinxs[0,i].xaxis.tick_top(True)
-            #axs[ 0,i].xaxis.tick_bottom()
-            #pdb.set_trace()
-
-        #if labels[0]: axs[0,0].set_xlabel=labels[0]
-        #if labels[1]: axs[0,0].set_xlabel=labels[1]
 
 
     else:
