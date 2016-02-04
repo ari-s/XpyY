@@ -47,6 +47,8 @@ except (FileNotFoundError,IndexError):
     print(__doc__)
     sys.exit(1)
 
+targets = sys.argv[2:]
+
 if not set(('src','target','y','y1','y2','yx','y1x','y1x1','y2x','y2x1','y2x2')).intersection(recipes[0]):
     defaults = recipes.pop(0)
 else:
@@ -55,9 +57,12 @@ else:
 for y in recipes:
     if isinstance(y, dict):
         try: figsize = y.pop('figsize')
-        except KeyError: fig = plt.figure()
-        else: fig = plt.figure(figsize)
-        plot(y,fig, defaults)
+        except KeyError:
+            try: figsize = defaults['figsize']
+            except KeyError: fig = plt.figure()
+            else: fig = plt.figure(figsize=[d/25.4 for d in figsize])
+        else: fig = plt.figure(figsize=[d/25.4 for d in figsize])
+        plot(y,fig, defaults,targets=targets)
 
     elif isinstance(y, list):
 
@@ -75,9 +80,9 @@ for y in recipes:
             if isinstance(x,list):
                 xlen = len(x)
                 for xpos,i in enumerate(x):
-                    plot(i,fig,xlen,ylen,xpos,ypos)
+                    plot(i,fig,xlen,ylen,xpos,ypos,targets=targets)
             else:
-                plot(x,fig,defaults,1,ylen,1,ypos)
+                plot(x,fig,defaults,1,ylen,1,ypos,targets=targets)
 
     else:
         raise ValueError('first depth item in yaml must be list or dict')
