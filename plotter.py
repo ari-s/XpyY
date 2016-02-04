@@ -192,6 +192,5 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         
 
     #pdb.set_trace()
-    fig.tight_layout()
     fig.savefig(target,format=outformat)
     return fig
