@@ -9,7 +9,7 @@ except SystemError:
     from plot import inputfilter
     from plot.operations import operations
     from subplots2 import subplots2
-import re, numbers, copy, numpy
+import re, numbers, numpy
 from matplotlib import pyplot
 import pdb
 
@@ -63,7 +63,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         target,caption = target[:2]
     else:
         labels = list(map(popset,('xlabel','ylabel'),('x1label','y1label')))
-        labels.extend(map(popset,('x2label', 'y2label')))
+    # need space as default second label b/c to differ subplot call from first axis
+    # this will break for ylabel,xlabel = ' '
+    labels.extend(map(popset,('x2label', 'y2label'), (' ',' ')))
 
     if targets and target not in targets:
         return fig
@@ -128,17 +130,26 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
 
     # if we have breaks, come up with a new figure, no way to save the old one -
     # incompatible with more than one plot per figure
+    subplots2args = dict(xbreaks=xbreaks, ybreaks=ybreaks, maxXTicks=maxXTicks, maxYTicks=maxYTicks, alpha=.5)
     if xbreaks[0] or ybreaks[0]:
-        
-        axs = subplots2(fig, xbreaks, ybreaks, maxXTicks=maxXTicks, maxYTicks=maxYTicks)
-        pdb.set_trace()
+        if not ( y2x1 or y1x2 ):
+            axs = subplots2(fig, xlabel=labels[0], ylabel=labels[1], **subplots2args)
+        elif y2x1:
+            axs = subplots2(fig, xlabel=labels[0], ylabel=labels[1], ytticks=False, **subplots2args)
+            twinys = subplots2(fig, xlabel=labels[0], ylabel=labels[3], ytticks=False, yaxpos='right', **subplots2args)
+            lines = subplot(y2x1, *twinys.flat) 
+            
+        elif y1x2:
+            axs = subplots2(fig, xlabel=labels[2], ylabel=labels[1], xtticks=False, **subplots2args)
+            twinys = subplots2(fig, xtticks=False, xaxpos='top', **subplots2args)
+            lines = subplot(y1x2, *twinx.flat)
 
         # the actual draw call
-        lines.extend(subplot(y1x1,*axs.flat))
+        #lines =  subplot(y1x1,*axs.flat)  + lines
+        pdb.set_trace()
 
         #if y2x1:
-            #twinxs = numpy.array([ ax.twinx() for ax in axs.flat ])
-            #twinxs.shape = axs.shape
+            #twinxs = subplot
             #lines.extend(subplot(y2x1,*twinxs.flat))
             #try: labels[3]
             #except IndexError: pass

@@ -1,8 +1,8 @@
 import numpy
-from matplotlib import pyplot, ticker
+from matplotlib import pyplot, ticker, figure
 
 def subplots2(fig,xbreaks,ybreaks,xaxpos='bottom',yaxpos='left',xtticks=True,ytticks=True,
-              maxXTicks=None, maxYTicks=None,**plotopts):
+              maxXTicks=None, maxYTicks=None,axset=None, **plotopts):
     '''creates subaxs similar to matplotlib.pyplot.subplots with shared axes
     no inner spines, ticks, useful for broken axes
 
@@ -16,7 +16,11 @@ def subplots2(fig,xbreaks,ybreaks,xaxpos='bottom',yaxpos='left',xtticks=True,ytt
     axs = numpy.ndarray((len(ybreaks),len(xbreaks)),dtype=object)
     xlabel = plotopts.pop('xlabel',None)
     ylabel = plotopts.pop('ylabel',None)
-    def subplot(loc, **opts): return pyplot.subplot(gridspec.new_subplotspec(loc,1,1),**opts)
+    def subplot(loc, **opts):
+        if not axset:
+            return fig.add_subplot(gridspec.new_subplotspec(loc,1,1),**opts)
+        else:
+            return fig.add_axes(axset[loc].get_position,**opts)
 
     # gridspec: alignment of the subplots
     try: width = [ right-left for left,right in xbreaks ]
@@ -75,9 +79,9 @@ def subplots2(fig,xbreaks,ybreaks,xaxpos='bottom',yaxpos='left',xtticks=True,ytt
                 axs[j,-1].tick_params(which='both',right=True,labelright=False, labelleft=False)
 
         elif yaxpos == 'right':
-            axs[j,0].tick_params(which='both',top=True)
+            axs[j,-1].tick_params(which='both',right=True,labelleft=False, labelright=True)
             if xtticks:
-                axs[j,-1].tick_params(which='both',left=True,labelleft=False)
+                axs[j,0].tick_params(which='both',left=True,labelleft=False)
 
         else:
             raise ValueError('That direction (%s) is invalid'%yaxpos)
