@@ -1,3 +1,7 @@
+#!/usr/bin/python3
+# Copyright (c) 2016, Arian Sanusi
+# License: Artistic License 2.0 (see ./Artistic-2.0)
+
 import numpy,pdb
 from matplotlib import pyplot, ticker
 
