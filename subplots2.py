@@ -1,90 +1,114 @@
-import numpy
-from matplotlib import pyplot, ticker, figure
+import numpy,pdb
+from matplotlib import pyplot, ticker
 
-def subplots2(fig,xbreaks,ybreaks,xaxpos='bottom',yaxpos='left',xtticks=True,ytticks=True,
-              maxXTicks=None, maxYTicks=None,axset=None, **plotopts):
+# tick locator creation helper
+def ticloc(k,max=None):
+    if max and max[k]: return ticker.MaxNLocator(max[k])
+    else: return ticker.AutoLocator()
+
+def breakSign(ax, d=.015):
+    kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+    
+
+def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plotopts):
     '''creates subaxs similar to matplotlib.pyplot.subplots with shared axes
     no inner spines, ticks, useful for broken axes
 
     fig is pyplot figure object,
-    grid is a GridSpec,
+    twin is one of None, 'x' or 'y' specifying the other axis for which you want a dual axis for.
     [xy]axpos specifies the side on which labels and ticks are shown
     [xy]ttiks specifies wether [xy]axpos opposing side will get ticks
     plotopts is passed to subplot2grid calls
     '''
-
+    # for the sharing of axes, see https://stackoverflow.com/questions/12919230
     axs = numpy.ndarray((len(ybreaks),len(xbreaks)),dtype=object)
-    xlabel = plotopts.pop('xlabel',None)
-    ylabel = plotopts.pop('ylabel',None)
-    def subplot(loc, **opts):
-        if not axset:
-            return fig.add_subplot(gridspec.new_subplotspec(loc,1,1),**opts)
-        else:
-            return fig.add_axes(axset[loc].get_position,**opts)
-
-    # gridspec: alignment of the subplots
-    try: width = [ right-left for left,right in xbreaks ]
+    if twin: twinaxs = numpy.empty_like(axs)
+    
+    # for ratios of subplots
+    try: width = numpy.array([ right-left for left,right in xbreaks ],dtype=float)
     except TypeError: width = [ 1 ]
-    try: height = [ top-bottom for bottom,top in ybreaks ]
+    else: width/=sum(width)
+    try: height = numpy.array([ top-bottom for bottom,top in ybreaks ],dtype=float)
     except TypeError: height = [ 1 ]
+    else: width/=sum(width)
 
     gridspec = pyplot.GridSpec(nrows=len(ybreaks), ncols=len(xbreaks), width_ratios=width, height_ratios=height)
-
-    # first plot. Others will share its y axes
-    ax = subplot((0,0), xlabel=xlabel, ylabel=ylabel, **plotopts)
-
-    # creating remaining axs. Matplotlib uses columns as least significant, i.e. european reading convention
+    def subplot(loc, **opts): return fig.add_subplot(gridspec.new_subplotspec(loc,1,1),**opts)
+    
     for i,x in enumerate(xbreaks):
-        axs[0,i] = subplot((0,i), sharey=axs[0,0], **plotopts)
         for j,y in enumerate(ybreaks):
-            ax = subplot((j,i), sharex=axs[0,i], **plotopts)
+            ax = subplot((j,i),**plotopts)
+            axs[j,i] = ax
+            
             if x: ax.set_xlim(x)  # may have None-case
             if y: ax.set_ylim(y)  # dito
-            ax.tick_params(which='both',
-                bottom=False,top=False,left=False,right=False)
+            
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+            
             for side in ('top','bottom','left','right'):
                 ax.spines[side].set_visible(False)
-
-            def ticloc(k,max=None):
-                if max and max[k]: return ticker.MaxNLocator(max[k])
-                else: return ticker.AutoLocator()
-
-            ax.xaxis.set_major_locator(ticloc(i,maxXTicks)) #,prune='both'))
-            ax.yaxis.set_major_locator(ticloc(j,maxYTicks)) #,prune='both'))
-            axs[j,i] = ax
-
+                            
+            if twin == 'x': twinax = ax.twinx()
+            if twin == 'y': twinax = ax.twiny()
+            elif twin: ValueError('%s is not an axis specifier'%twin)
+            
+            # removing twin deco
+            if twin:
+                twinax.get_xaxis().set_visible(False)
+                twinax.get_yaxis().set_visible(False)
+                for side in ('top','bottom','left','right'):
+                    twinax.spines[side].set_visible(False)
+                if x: twinax.set_xlim(x)  # may have None-case
+                if y: twinax.set_ylim(y)  # dito
+                twinaxs[j,i] = twinax
+                
+                # change ticklabels
+                twinax.xaxis.set_major_locator(ticloc(i,maxXTicks))
+                twinax.yaxis.set_major_locator(ticloc(j,maxYTicks))
+                
+            ax.xaxis.set_major_locator(ticloc(i,maxXTicks))
+            ax.yaxis.set_major_locator(ticloc(j,maxYTicks))
+            
+        # restore deco on top, bottom plots
         axs[0,i].spines['top'].set_visible(True)
         axs[-1,i].spines['bottom'].set_visible(True)
-
-        if xaxpos == 'bottom':
-            axs[-1,i].tick_params(which='both',bottom=True)
-            if xtticks:
-                axs[0,i].tick_params(which='both',top=True,labeltop=False)
-
-        elif xaxpos == 'top':
-            axs[0,i].spines['top'].set_visible(True)
-            axs[0,i].tick_params(which='both',top=True)
-            if xtticks:
-                axs[-1,i].tick_params(which='both',bottom=True,labelbottom=False)
-        else:
-            raise ValueError('That direction (%s) is invalid'%xaxpos)
-
-    for j in range(len(ybreaks)):
+        axs[-1,i].get_xaxis().set_visible(True)
+        if twin == 'y': 
+            twinaxs[0,i].get_xaxis().set_visible(True)
+            twinaxs[0,i].get_shared_y_axes().join(*twinaxs[:,i])
+            
+        # now the break significant:
+        c=.006
+        d=c/width[i]
+        c=.03
+        bkwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+        if i>0:
+            axs[0,i].plot((-d, +d), (-c, +c), **bkwargs)            
+            axs[0,i].plot((-d, +d), (1 - c, 1 + c), **bkwargs)
+        if i+1<len(xbreaks):
+            axs[-1,i].plot((1 - d, 1 + d), (1 - c, 1 + c), **bkwargs)
+            axs[-1,i].plot((1 - d, 1 + d), (-c, +c), **bkwargs)
+    
+    # restore deco on left, right plots
+    for j,y in enumerate(ybreaks):
         axs[j,0].spines['left'].set_visible(True)
         axs[j,-1].spines['right'].set_visible(True)
-
-        if yaxpos == 'left':
-            axs[j,0].tick_params(which='both',left=True)
-            if ytticks:
-                axs[j,-1].tick_params(which='both',right=True,labelright=False, labelleft=False)
-
-        elif yaxpos == 'right':
-            axs[j,-1].tick_params(which='both',right=True,labelleft=False, labelright=True)
-            if xtticks:
-                axs[j,0].tick_params(which='both',left=True,labelleft=False)
-
-        else:
-            raise ValueError('That direction (%s) is invalid'%yaxpos)
-
-
-    return axs
+        axs[j,0].get_yaxis().set_visible(True)
+        if twin == 'x': 
+            twinaxs[j,-1].get_yaxis().set_visible(True)
+            twinaxs[j,-1].get_shared_x_axes().join(*twinaxs[j,:])
+                # now the break significant:
+        
+        d=.015
+        bkwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+        if j>0:
+            axs[j,0].plot((-d, +d), (-d, +d), **bkwargs)
+            axs[j,-1].plot((1 - d, 1 + d), (-d, +d), **bkwargs)
+        if j+1<len(ybreaks):
+            axs[j,0].plot((-d, +d), (1 - d, 1 + d), **bkwargs)
+            axs[j,-1].plot((1 - d, 1 + d), (1 - d, 1 + d), **bkwargs)
+    
+    # return signature deliberately different, make sure callee does what he intended
+    if twin: return axs, twinaxs
+    else: return axs
