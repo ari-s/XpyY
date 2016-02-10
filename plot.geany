@@ -1,6 +1,6 @@
 [editor]
 line_wrapping=false
-line_break_column=72
+line_break_column=92
 auto_continue_multiline=true
 
 [file_prefs]
@@ -18,20 +18,18 @@ detect_indent_width=true
 indent_mode=2
 
 [project]
-name=plotting
-base_path=/home/arian/projects/plot
+name=XpyY
+base_path=.
 description=
 file_patterns=
 
 [long line marker]
-long_line_behaviour=1
-long_line_column=76
+long_line_behaviour=2
+long_line_column=96
 
 [files]
-current_page=2
-FILE_NAME_0=37;Python;0;EUTF-8;0;1;0;%2Fhome%2Farian%2Fprojects%2Fplot%2Finputfilter%2Flvm.py;0;4
-FILE_NAME_1=51;Python;0;EUTF-8;0;1;0;%2Fhome%2Farian%2Fprojects%2Fplot%2Fhelpers%2Fbasename.py;0;4
-FILE_NAME_2=11;Python;0;EUTF-8;0;1;0;%2Fhome%2Farian%2Fprojects%2Fplot%2Finputfilter%2Fbase.py;0;4
+current_page=0
+FILE_NAME_0=0;Python;0;EUTF-8;0;1;0;%2Fhome%2Farian%2Fprojects%2FXpyY%2Fsubplots2.py;0;4
 
 [VTE]
 last_dir=/home/arian/lightchec/report
