@@ -7,12 +7,12 @@ try:
     from . import inputfilter
     from .operations import operations
     from .subplots2 import subplots2
-    
+
 except SystemError:
     from packagedefaults import packagedefaults
-    from plot import inputfilter
-    from plot.operations import operations
-    from subplots2 import subplots2
+    from XpyY import inputfilter
+    from XpyY.operations import operations
+    from XpyY.subplots2 import subplots2
 import re, numbers, numpy
 from matplotlib import pyplot,transforms,text
 import pdb
@@ -23,7 +23,7 @@ def execCompute(src, instructions):
     if isinstance(instructions, list):
 
         if all( isinstance(i, int) for i in instructions ):
-            # return a list, because that can be reiterated over 
+            # return a list, because that can be reiterated over
             # ( necessary for broken axis -> subplots )
             return [ src[0][i] for i in instructions ]
 
@@ -131,66 +131,44 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
                 data = execCompute(src,part)
                 #pdb.set_trace()
                 for p in plots:
-                    lines.extend(p.plot(*data,**opts))
+                    lines.append(p.plot(*data,**opts))
         return lines
-
-    lines = []
 
     # if we have breaks, come up with a new figure, no way to save the old one -
     # incompatible with more than one plot per figure
     subplots2args = dict(xbreaks=xbreaks, ybreaks=ybreaks, maxXTicks=maxXTicks, maxYTicks=maxYTicks)
     if xbreaks[0] or ybreaks[0]:
-        if not ( y2x1 or y1x2 ):
-            axs = subplots2(fig, **subplots2args)
-        elif y2x1:
-            axs, twinaxs = subplots2(fig,twin='x', **subplots2args)     
-            lines = subplot(y2x1,*twinaxs.flat)
-            if labels[3]: twinaxs[0,0].set_ylabel(labels[3])
-        elif y1x2:
-            axs, twinaxs = subplots2(fig,twin='y', **subplots2args)
-            lines = subplot(y1x2, *twinaxs.flat)
-            if labels[2]: twinaxs[0,0].set_xlabel(labels[2])
-        
-        lines = subplot(y1x1,*axs.flat) + lines
-        
-        bgax = fig.add_subplot(111,frameon=False)
-        bgax.set_xticks([])
-        bgax.set_yticks([])
-        bgax.legend(lines,linelabels,**legendopts)
-        fig.tight_layout()
-        fig.subplots_adjust(left=.12,bottom=.18, right=.92, top=.9, wspace=.03,hspace=.03)
-        
-        # matplotlib is unusable without SO: https://stackoverflow.com/questions/19306510
-        bbox = bgax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        width, height = bbox.width, bbox.height # that's in bush units 
 
-        print(labels)
-        # this moves the labels somewhere a little bit reasonable
-        if labels[0]: 
-            bgax.set_ylabel(labels[0])
-            bgax.xaxis.set_label_coords(0.5,-.3/height,bgax.transAxes) #fig.transFigure)
-        if labels[1]: 
-            bgax.set_xlabel(labels[1])
-            bgax.yaxis.set_label_coords(-.6/width,0.5,bgax.transAxes)
-        if labels[2]:
-            tbgax = bgax.twiny()
-        elif labels[3]:
-            tbgax = bgax.twinx()
-        if labels[2] or labels[3]:
-            pdb.set_trace()
-            tbgax.set_xticks([])
-            tbgax.set_yticks([])
-            for side in ('top','bottom','left','right'):
-                tbgax.spines[side].set_visible(False)
-            if labels[2]:
-                tbgax.set_xlabel(labels[2])
-                tbgax.xaxis.set_label_coords(0.5,1+.3/height,bgax.transAxes)
-            if labels[3]:
-                tbgax.set_ylabel(labels[3])
-                twinaxs[0,-1].set_ylabel(labels[3])
-                tbgax.yaxis.set_label_coords(1,.5,bgax.transAxes)
-                print('got heer')
-        #print(text.Text(1+.6/width,.5,labels[3],transform=bgax.transAxes))
+        if not ( y2x1 or y1x2 ):
+            axs,bgax = subplots2(fig, **subplots2args)
+            bgtwinlines = [] # so we can do legend call independend on the others existence
+
+        elif y2x1:
+            axs, bgax, twinaxs, bgtwin = subplots2(fig, twin='x', **subplots2args)
+            bgtwinlines, *twinlines = subplot(y2x1, bgtwin, *twinaxs.flat)
+            # above for some reasons produces a list arround what we want, therefore:
+            if labels[3]: bgtwin.set_ylabel(labels[3])
+
+        elif y1x2:
+            axs, bgax, twinaxs, bgtwin = subplots2(fig,twin='y', **subplots2args)
+            (bgtwinlines, *twinlines) = subplot(y1x2, bgtwin, *twinaxs.flat)
+            if labels[2]: bgtwin.set_xlabel(labels[2])
+
+        bglines, *lines = subplot(y1x1, bgax, *axs.flat)
+        bgax.legend(bglines+bgtwinlines,linelabels,**legendopts)
+
+        for line in bglines + bgtwinlines:
+            line.set_visible(False)
+
+        # print the labels onto the bgax
+        if labels[0] or labels[1]:
+            if labels[0]: bgax.set_xlabel(labels[0])
+            if labels[1]: bgax.set_ylabel(labels[1])
+        for l in bgax.get_xticklabels() + bgax.get_yticklabels() + \
+                  bgtwin.get_xticklabels() + bgtwin.get_yticklabels():
+            l.set_alpha(0.0)
+            l.set_alpha(0.0)
+
 
     else:
         # y1x1 plots
@@ -216,6 +194,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         if y2x2:
             raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
         p11.legend(lines,linelabels,**legendopts)
-    pdb.set_trace()
+
+    fig.tight_layout(pad=0,w_pad=0.5,h_pad=0.5)
     fig.savefig(target,format=outformat)
     return fig

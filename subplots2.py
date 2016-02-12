@@ -13,7 +13,6 @@ def ticloc(k,max=None):
 def breakSign(ax, d=.015):
     kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
 
-
 def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plotopts):
     '''creates subaxs similar to matplotlib.pyplot.subplots with shared axes
     no inner spines, ticks, useful for broken axes
@@ -40,6 +39,11 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
         nrows=len(ybreaks), ncols=len(xbreaks), width_ratios=width, height_ratios=height)
 
     def subplot(loc, **opts): return fig.add_subplot(gridspec.new_subplotspec(loc,1,1),**opts)
+
+    # dummy background plot for the axes' labels
+    bgax = fig.add_subplot(111)
+    for side in ('top','bottom','left','right'):
+        bgax.spines[side].set_visible(False)
 
     for i,x in enumerate(xbreaks):
         for j,y in enumerate(ybreaks):
@@ -83,6 +87,7 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
         if twin == 'y':
             twinaxs[0,i].get_xaxis().set_visible(True)
             twinaxs[0,i].get_shared_y_axes().join(*twinaxs[:,i])
+            bgtwin = bgax.twiny()
 
         # now the break significant:
         c=.006
@@ -104,6 +109,7 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
         if twin == 'x':
             twinaxs[j,-1].get_yaxis().set_visible(True)
             twinaxs[j,-1].get_shared_x_axes().join(*twinaxs[j,:])
+            bgtwin = bgax.twinx()
                 # now the break significant:
 
         d=.015
@@ -115,6 +121,10 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
             axs[j,0].plot((-d, +d), (1 - d, 1 + d), **bkwargs)
             axs[j,-1].plot((1 - d, 1 + d), (1 - d, 1 + d), **bkwargs)
 
+    if twin:
+        for side in ('top','bottom','left','right'):
+            bgtwin.spines[side].set_visible(False)
+
     # return signature deliberately different, make sure callee does what he intended
-    if twin: return axs, twinaxs
-    else: return axs
+    if twin: return axs, bgax, twinaxs, bgtwin
+    else: return axs, bgax
