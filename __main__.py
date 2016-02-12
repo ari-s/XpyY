@@ -15,28 +15,39 @@ If one recipe target exists and is newer than both src and recipe, it is skipped
 
 recipe: YAML document with a list with (in this order):
 - at most one dict without src, target and plots providing defaults
-- lists nested zero to two deep with:
-  - at least one dict with src[], target and plot spec
-  if item at depth two is a list, the first item may be an (x,y) tuple of figsize/mm
-  else figsize may be a dict key
+- at least on dict with src, target keys
 
-src[]: providing >=1 arrays which are to be plotted possibly after having some
-    arrays: 2D numpy arrays where entries along the first axis is assumed to represent one data vector
-    single src (no iterable arround the 2D array) also permissable
-srcformat:  which inputfilter is used to get an array from src. defaults to the file extension
-target:     plot name
-target: *l  shorthand for { target=l[1], caption, x1label=l[2],[[x2label]],y1label,[y2label]}
-format:     target format, if not given deduced from dest by pyplot.savefig().
+src[]:        provides an array which is to be plotted possibly after some calculations on their data.
+              array: 2D numpy array where entries along the first axis is assumed to represent one data vector
+target:       plot filename
+target: *l    shorthand for { target=l[1], caption, x1label=l[2],[[x2label]],y1label,[y2label]}
+format:       target format, if not given deduced from dest by pyplot.savefig().
+targetprefix: prepended to all plots       - a simple string. Breaks recipe portability bc / vs \
+srcprefix:    prepended to all src files
+srcformat:    which inputfilter is used to get an array from src. defaults to the file extension
+
+figurekwargs:
+xbreaks:      skip data between break tuples:
+ybreaks:      ex [[0,10],[20,100]]
+legendopts:   kwargs for the legend
+maxXTicks:    how many X ticks to place er break segment. Has to be overriden sometimes. 0=auto
+maxYTicks:    ditto for Y
+
 y[12]?(x[12])? designator where to plot to.
     x1 bottom axis, x2 top axis dual to x1
     y1 left axis, y2 right axis dual to y1
 
-y[12]?(x[12])? = (operation)?\(src,...),*args,**kwargs
-    operation is a function from operations, src specifies which column
-    (from which src, must be explicit if more than one source)
-    identity is implicit operation.
+y[12]?(x[12])? : instructions
+    instructions is list
+      first item: data to plot. may be an operation(dict) or data(list)
+      every other item: plotkwargs
 
-all other entries are passed to pyplot.figure()
+    data specifies which columns of the src to take
+
+    operation is a function from operations, src specifies which column
+    an operation dict may have a second entry args with operationkwargs
+
+figurekwargs are passed to figure() call, same for legendopts, plotkwargs, operationkwargs
 '''
 
 try: recipes = yaml.load(open(sys.argv[1]))
