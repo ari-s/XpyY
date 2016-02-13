@@ -5,13 +5,13 @@
 try:
     from .packagedefaults import packagedefaults
     from . import inputfilter
-    from .operations import operations
+    from .operations import operations,instructEval
     from .subplots2 import subplots2
 
 except SystemError:
     from packagedefaults import packagedefaults
     from XpyY import inputfilter
-    from XpyY.operations import operations
+    from XpyY.operations import operations,instructEval
     from XpyY.subplots2 import subplots2
 import re, numbers, numpy
 from matplotlib import pyplot,transforms,text
@@ -43,6 +43,10 @@ def execCompute(src, instructions):
             return operations[operation](*args, **kwargs)
         else:
             raise ValueError('Invalid instruction in recipe')
+
+    if isinstance(instructions, str):
+        # FIXME: src[0] is a hack b/c may have several src (not implemented)
+        return instructEval.instructEval(src[0],instructions)
 
 def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     '''plots on fig from one recipe (as python dictionary) as described in __main__.__doc__'''
