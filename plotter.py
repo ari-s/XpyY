@@ -63,7 +63,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     subplotopts = popset('opts',{})
     xbreaks = popset('xbreaks',[None]) # have to have something inside b/c later iterate over
     ybreaks = popset('ybreaks',[None])
-    src = popset('srcprefix')+popset('src')
+    src = popset('src')
+    srcprefix = popset('srcprefix')
     plotpos= popset('plotpos',((xlen*ylen),xpos,ypos))
     outformat = popset('format')
     legendopts = popset('legendopts',{})
@@ -92,10 +93,10 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
                 else: y1x1.append(p)
     for i in map(recipe.pop,pop): pass
 
-    if not isinstance(src,list):
-        src = [ src ]
-
-    src = [ inputfilter.__call__( i ) for i in src ]
+    if isinstance(src,dict):
+        src = { k: inputfilter.__call__( srcprefix+v ) for k,v in src.items() }
+    elif isinstance(src,str):
+        src = inputfilter.__call__( srcprefix+src )
 
     def subplot(recipes, *plots):
         lines = []
@@ -108,7 +109,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
                     except KeyError: pass
                     opts.update(v)
                 elif isinstance(v,str):
-                    data.extend(instructEval.instructEval(src[0],v))
+                    data.extend(instructEval.instructEval(src,v))
                 else:
                     raise ValueError('Could not parse %s'%v)
 
