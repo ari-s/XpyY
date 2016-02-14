@@ -59,6 +59,9 @@ except (FileNotFoundError,IndexError):
 # get default
 if not set(('src','target','y','y1','y2','yx','y1x','y1x1','y2x','y2x1','y2x2')).intersection(recipes[0]):
     defaults = recipes.pop(0)
+    fontsize = defaults.pop('fontsize',None)
+    if fontsize:
+        plt.rcParams['font.size'] = fontsize
 else:
     defaults = {}
 
