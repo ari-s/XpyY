@@ -73,6 +73,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
 
     # extracting drawing instructions
     plotRe = re.compile(r'(y[12]?)(x[12]?)?')
+    lines = []
     y1x1,y2x1,y1x2,y2x2 = [],[],[],[]
     linelabels = []
     pop=[] #: need to delete drawing instructions from recipe
