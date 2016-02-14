@@ -2,5 +2,6 @@
 packagedefaults = dict(
     srcprefix = '',
     targetprefix = '',
-    legendopts = dict(prop=dict(size=9))
+    legendopts = dict(loc='upper left'),
+    legendpos = (0,1)
 )

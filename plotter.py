@@ -68,6 +68,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     plotpos= popset('plotpos',((xlen*ylen),xpos,ypos))
     outformat = popset('format')
     legendopts = popset('legendopts',{})
+    legendpos = popset('legendpos',(0,1))
     maxXTicks = popset('maxXTicks')
     maxYTicks = popset('maxYTicks')
 
@@ -141,7 +142,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         bglines, *lines = subplot(y1x1, bgax, *axs.flat)
         legend = fig.legend(bglines+bgtwinlines,linelabels,**legendopts)
         legend.set_zorder(20)
-        legend.set_bbox_to_anchor((0,1),bgax.transAxes)
+        legend.set_bbox_to_anchor(legendpos,bgax.transAxes)
 
         for line in bglines + bgtwinlines:
             line.set_visible(False)
@@ -152,7 +153,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
             if labels[1]: bgax.set_ylabel(labels[1])
         for l in bgax.get_xticklabels() + bgax.get_yticklabels() + \
                   bgtwin.get_xticklabels() + bgtwin.get_yticklabels():
-            l.set_alpha(0.0)
             l.set_alpha(0.0)
 
     else:
