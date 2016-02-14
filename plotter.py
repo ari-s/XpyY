@@ -25,13 +25,20 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         '''returns key from either recipe, defaults or packagedefaults
         key is popped from dic with given default'''
 
-        if default != None:
-            v = default
-        else:
-            v = packagedefaults.get(key)
-            v = defaults.get(key,v)
+        def get(dic,key,default):
+            if  isinstance(dic,dict) and isinstance(default,dict):
+                default.update(dic)
+                return default
+            else:
+                return dic.get(key,default)
 
-        v = recipe.pop(key,v)
+        default = get(packagedefaults,key,default)
+        v = get(defaults,key,default)
+        v = get(recipe,key,v)
+
+        # make sure it's gone
+        recipe.pop(key,None)
+
         if v == default and altnames:
             v = popset(altnames[0],default,altnames[1:])
             # altnames[1:] works because slicing with indices outside iterable returns empty iterable
