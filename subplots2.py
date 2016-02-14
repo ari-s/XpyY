@@ -36,7 +36,8 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
     else: width/=sum(width)
 
     gridspec = pyplot.GridSpec(
-        nrows=len(ybreaks), ncols=len(xbreaks), width_ratios=width, height_ratios=height)
+        nrows=len(ybreaks), ncols=len(xbreaks), width_ratios=width, height_ratios=height,
+        wspace=0.015*len(xbreaks), hspace=0.015*len(ybreaks)) # wspace is _w_ertical, hspace horizontal.
 
     def subplot(loc, **opts): return fig.add_subplot(gridspec.new_subplotspec(loc,1,1),**opts)
 

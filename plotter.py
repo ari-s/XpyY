@@ -138,7 +138,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
             if labels[2]: bgtwin.set_xlabel(labels[2])
 
         bglines, *lines = subplot(y1x1, bgax, *axs.flat)
-        axs[0,0].legend(bglines+bgtwinlines,linelabels,**legendopts)
+        legend = fig.legend(bglines+bgtwinlines,linelabels,**legendopts)
+        legend.set_zorder(20)
+        legend.set_bbox_to_anchor((0,1),bgax.transAxes)
 
         for line in bglines + bgtwinlines:
             line.set_visible(False)
@@ -177,6 +179,5 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
             raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
         p11.legend(lines,linelabels,**legendopts)
 
-    fig.tight_layout(w_pad=0,h_pad=0.0)
     fig.savefig(target,format=outformat,bbox_inches='tight')
     return fig
