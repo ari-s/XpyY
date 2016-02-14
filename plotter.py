@@ -45,7 +45,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         return v
 
     target = recipe.pop('target') # no default for target
-    # parse target, if not shorthand notation extract labels
+    # parse target, if not shorthand notation extract axlabels
     if isinstance(target,list):
         labels = target[2:]
         target,caption = target[:2]
@@ -100,7 +100,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         src = inputfilter.__call__( srcprefix+src )
 
     def subplot(recipes, *plots):
+        '''plot the recipe on all *plots - this is like pyplot.plot, not subplots2'''
         lines = []
+        linelabels = []
         for recipe in recipes:
             opts = {}
             data = []
@@ -113,11 +115,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
                     data.extend(instructEval.instructEval(src,v))
                 else:
                     raise ValueError('Could not parse %s'%v)
-
             for p in plots:
                 lines.append(p.plot(*data,**opts))
-
-        return lines
+        return lines,linelabels
 
     # if we have breaks, come up with a new figure, no way to save the old one -
     # incompatible with more than one plot per figure
@@ -130,17 +130,17 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
 
         elif y2x1:
             axs, bgax, twinaxs, bgtwin = subplots2(fig, twin='x', **subplots2args)
-            bgtwinlines, *twinlines = subplot(y2x1, bgtwin, *twinaxs.flat)
+            (bgtwinlines, *twinlines),twinlinelabels = subplot(y2x1, bgtwin, *twinaxs.flat)
             # above for some reasons produces a list arround what we want, therefore:
             if labels[3]: bgtwin.set_ylabel(labels[3])
 
         elif y1x2:
             axs, bgax, twinaxs, bgtwin = subplots2(fig,twin='y', **subplots2args)
-            (bgtwinlines, *twinlines) = subplot(y1x2, bgtwin, *twinaxs.flat)
+            (bgtwinlines, *twinlines),twinlinelabels = subplot(y1x2, bgtwin, *twinaxs.flat)
             if labels[2]: bgtwin.set_xlabel(labels[2])
 
-        bglines, *lines = subplot(y1x1, bgax, *axs.flat)
-        legend = fig.legend(bglines+bgtwinlines,linelabels,**legendopts)
+        (bglines, *lines),linelabels = subplot(y1x1, bgax, *axs.flat)
+        legend = fig.legend(bglines+bgtwinlines,linelabels+twinlinelabels,**legendopts)
         legend.set_zorder(20)
         legend.set_bbox_to_anchor(legendpos,bgax.transAxes)
 
