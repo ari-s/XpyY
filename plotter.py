@@ -54,7 +54,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     # need space as default second label b/c to differ subplot call from first axis
     # this will break for ylabel,xlabel = ' '
     labels.extend(map(popset,('x2label', 'y2label'), (' ',' ')))
-    print(labels)
 
     if targets and target not in targets:
         return fig
@@ -101,7 +100,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     def subplot(recipes, *plots):
         lines = []
         for recipe in recipes:
-            print(recipe)
             opts = {}
             data = []
             for i,v in enumerate(recipe):
@@ -114,7 +112,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
                 else:
                     raise ValueError('Could not parse %s'%v)
 
-            print(opts)
             for p in plots:
                 lines.append(p.plot(*data,**opts))
 
@@ -142,8 +139,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
 
         bglines, *lines = subplot(y1x1, bgax, *axs.flat)
         axs[0,0].legend(bglines+bgtwinlines,linelabels,**legendopts)
-
-        print(linelabels)
 
         for line in bglines + bgtwinlines:
             line.set_visible(False)
@@ -182,6 +177,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
             raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
         p11.legend(lines,linelabels,**legendopts)
 
-    fig.tight_layout(w_pad=0.5,h_pad=0.5)
+    fig.tight_layout(w_pad=0,h_pad=0.0)
     fig.savefig(target,format=outformat,bbox_inches='tight')
     return fig
