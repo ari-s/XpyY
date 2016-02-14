@@ -50,17 +50,27 @@ y[12]?(x[12])? : instructions
 figurekwargs are passed to figure() call, same for legendopts, plotkwargs, operationkwargs
 '''
 
+# load recipe
 try: recipes = yaml.load(open(sys.argv[1]))
 except (FileNotFoundError,IndexError):
     print(__doc__)
     sys.exit(1)
 
-targets = sys.argv[2:]
-
+# get default
 if not set(('src','target','y','y1','y2','yx','y1x','y1x1','y2x','y2x1','y2x2')).intersection(recipes[0]):
     defaults = recipes.pop(0)
 else:
     defaults = {}
+
+# regard targets
+targets = sys.argv[2:]
+if targets:
+    for i,candidate in enumerate(recipes):
+        candidate = candidate['target']
+        if isinstance(candidate,list): #shorthand notation
+            candidate = candidate[0]
+        if candidate not in targets:
+            recipes.pop(i)
 
 for y in recipes:
     if isinstance(y, dict):
