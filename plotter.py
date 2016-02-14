@@ -26,8 +26,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         key is popped from dic with given default'''
 
         def get(dic,key,default):
-            if  isinstance(dic,dict) and isinstance(default,dict):
-                default.update(dic)
+            if  isinstance(dic.get(key),dict) and isinstance(default,dict):
+                default.update(dic.get(key))
                 return default
             else:
                 return dic.get(key,default)
@@ -181,6 +181,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
             raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
         p11.legend(lines,linelabels,**legendopts)
 
-    fig.tight_layout(pad=0,w_pad=0.5,h_pad=0.5)
-    fig.savefig(target,format=outformat)
+    fig.tight_layout(w_pad=0.5,h_pad=0.5)
+    fig.savefig(target,format=outformat,bbox_inches='tight')
     return fig
