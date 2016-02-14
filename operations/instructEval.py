@@ -1,6 +1,7 @@
 import numpy
 import keyword
 import warnings
+from . import operations
 
 def base26(num):
     '''returns str(num) in base26 with roman letters as numerals'''
@@ -24,4 +25,4 @@ def instructEval(data, instructions):
         if i in keyword.kwlist:
             warnings.warn('column %s hidden by python keyword, use data[i]'%i)
 
-    return eval(instructions,None,LetterColsFromArray(data))
+    return eval(instructions,operations,LetterColsFromArray(data))

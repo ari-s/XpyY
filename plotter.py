@@ -18,36 +18,6 @@ from matplotlib import pyplot,transforms,text
 import pdb
 import time
 
-def execCompute(src, instructions):
-    '''executes drawing instruction as described in __main__.__doc__'''
-    if isinstance(instructions, list):
-
-        if all( isinstance(i, int) for i in instructions ):
-            # return a list, because that can be reiterated over
-            # ( necessary for broken axis -> subplots )
-            return [ src[0][i] for i in instructions ]
-
-        elif all( isinstance(i, dict) for i in instructions ):
-            return NotImplementedError('did not get here')
-
-    elif isinstance(instructions, dict):
-        kwargs = instructions.pop('args',{})
-        operation,operands = list(instructions.items())[0] #there may only be one
-        if isinstance(operands,dict):
-            intermediate = execCompute(src,operands)
-            return operations[operation](*intermediate, **kwargs)
-        elif isinstance(operands, list):
-            if all( isinstance(i, dict) for i in operands ):
-                raise NotImplementedError('did not get here')
-            args = [ src[0][i] for i in operands ]
-            return operations[operation](*args, **kwargs)
-        else:
-            raise ValueError('Invalid instruction in recipe')
-
-    if isinstance(instructions, str):
-        # FIXME: src[0] is a hack b/c may have several src (not implemented)
-        return instructEval.instructEval(src[0],instructions)
-
 def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     '''plots on fig from one recipe (as python dictionary) as described in __main__.__doc__'''
 
@@ -123,19 +93,23 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     def subplot(recipes, *plots):
         lines = []
         for recipe in recipes:
+            print(recipe)
             opts = {}
+            data = []
             for i,v in enumerate(recipe):
                 if isinstance(v,dict):
-                    if all( isinstance(j,(numbers.Number, str)) for j in v.values()):
-                        if 'label' in v:
-                            linelabels.append(v.pop('label'))
-                        opts.update(v)
-                        del(recipe[i])
-            for part in recipe:
-                data = execCompute(src,part)
-                #pdb.set_trace()
-                for p in plots:
-                    lines.append(p.plot(*data,**opts))
+                    try: linelabels.append(v.pop('label'))
+                    except KeyError: pass
+                    opts.update(v)
+                elif isinstance(v,str):
+                    data.extend(instructEval.instructEval(src[0],v))
+                else:
+                    raise ValueError('Could not parse %s'%v)
+
+            print(opts)
+            for p in plots:
+                lines.append(p.plot(*data,**opts))
+
         return lines
 
     # if we have breaks, come up with a new figure, no way to save the old one -
@@ -159,7 +133,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
             if labels[2]: bgtwin.set_xlabel(labels[2])
 
         bglines, *lines = subplot(y1x1, bgax, *axs.flat)
-        bgax.legend(bglines+bgtwinlines,linelabels,**legendopts)
+        axs[0,0].legend(bglines+bgtwinlines,linelabels,**legendopts)
+
+        print(linelabels)
 
         for line in bglines + bgtwinlines:
             line.set_visible(False)
@@ -172,7 +148,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
                   bgtwin.get_xticklabels() + bgtwin.get_yticklabels():
             l.set_alpha(0.0)
             l.set_alpha(0.0)
-
 
     else:
         # y1x1 plots
