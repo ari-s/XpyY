@@ -1,9 +1,13 @@
-import numpy
+import numpy,csv
 
-def csv(infile):
+def csv(infile,delimiter=','):
     with open(infile) as f:
-        return numpy.array( [ l.strip().split(',') for l in f ]).transpose()
+        rv = [ l.strip().split(delimiter) for l in f ]
+        width = max(map(len,rv))
+        for l in rv:
+            for i in range(len(l),width):
+                l.append('')
+    return numpy.array(rv).transpose()
 
 def tsv(infile):
-    with open(infile) as f:
-        return numpy.array( [ l.split('\t') for l in f ] ).transpose()
+    return csv(infile,'\t')
