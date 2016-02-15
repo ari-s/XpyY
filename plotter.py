@@ -99,6 +99,14 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     elif isinstance(src,str):
         src = inputfilter.__call__( srcprefix+src )
 
+    dmap = popset('dmap')
+    if dmap:
+        if isinstance(src,numpy.ndarray):
+            src = eval(dmap,{'src':src},operations)
+        else:
+            for k,v in dmap.items():
+                src[k] = eval(v,{k:src[k]},operations)
+
     def subplot(recipes, *plots):
         '''plot the recipe on all *plots - this is like pyplot.plot, not subplots2'''
         lines = []
