@@ -11,12 +11,17 @@ def unsparse(data, relativeTo=0, dtype=float,relFunc=1, otherFunc=1):
     for i,col in enumerate(data[1:]):
         for r,v in zip(rel,col):
             if v!='':
-                unsparsed[2*i].append(r)
-                unsparsed[2*i+1].append(v)
+                try: complex(v)
+                except ValueError: pass
+                else:
+                    unsparsed[2*i].append(r)
+                    unsparsed[2*i+1].append(v)
 
     for i,col in enumerate(unsparsed):
         if i%2: # odd columns
             unsparsed[i] = dmap([col],[otherFunc])[0]
+        else:
+            unsparsed[i] = numpy.array(col)
 
     return numpy.array(unsparsed)
 
