@@ -3,13 +3,13 @@
 # License: Artistic License 2.0 (see ./Artistic-2.0)
 
 try:
-    from .packagedefaults import packagedefaults
+    from .packagedefaults import packagedefaults as pdefaults
     from . import inputfilter
     from .operations import operations,instructEval
     from .subplots2 import subplots2
 
 except SystemError:
-    from packagedefaults import packagedefaults
+    from packagedefaults import packagedefaults as pdefaults
     from XpyY import inputfilter
     from XpyY.operations import operations,instructEval
     from XpyY.subplots2 import subplots2
@@ -21,27 +21,28 @@ import time
 def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     '''plots on fig from one recipe (as python dictionary) as described in __main__.__doc__'''
 
+    # preserve defaults over different runs
+    packagedefaults = copy.deepcopy(pdefaults)
+    defaults = copy.deepcopy(defaults)
+
     def popset(key, default=None, *altnames):
         '''returns key from either recipe, defaults or packagedefaults
         key is popped from dic with given default'''
+        v = default
 
-        def get(dic,key,default):
-            if  isinstance(dic.get(key),dict) and isinstance(default,dict):
-                default.update(dic.get(key))
-                return default
-            else:
-                return dic.get(key,default)
-
-        default = get(packagedefaults,key,default)
-        v = get(defaults,key,default)
-        v = get(recipe,key,v)
-
-        # make sure it's gone
-        recipe.pop(key,None)
-
-        if v == default and altnames:
-            v = popset(altnames[0],default,altnames[1:])
-            # altnames[1:] works because slicing with indices outside iterable returns empty iterable
+        if any( isinstance(i.get(key,None),dict) for i in (packagedefaults, defaults, recipe) ) \
+                or isinstance(default,dict):
+            if default == None:
+                v = {}
+            v.update(packagedefaults.pop(key,{}))
+            v.update(defaults.pop(key,{}))
+            v.update(recipe.pop(key,{}))
+        else:
+            v = packagedefaults.pop(key,v)
+            v = defaults.pop(key,v)
+            v = recipe.pop(key,v)
+        #if not v:
+        #    raise KeyError('%s not found in any of packagedefaults,defaults,recipe'%key)
         return v
 
     target = recipe.pop('target') # no default for target
@@ -72,7 +73,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     maxXTicks = popset('maxXTicks')
     maxYTicks = popset('maxYTicks')
     plotargs = popset('plotargs',{})
-    twinplotargs = copy.deepcopy(plotargs).update(popset('twinplotargs')
+    twinplotargs = copy.deepcopy(plotargs).update(popset('twinplotargs',{}))
 
     # extracting drawing instructions
     plotRe = re.compile(r'(y[12]?)(x[12]?)?')
