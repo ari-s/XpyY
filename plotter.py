@@ -13,7 +13,7 @@ except SystemError:
     from XpyY import inputfilter
     from XpyY.operations import operations,instructEval
     from XpyY.subplots2 import subplots2
-import re, numbers, numpy
+import re, numbers, numpy, copy
 from matplotlib import pyplot,transforms,text
 import pdb
 import time
@@ -71,6 +71,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
     legendpos = popset('legendpos',(0,1))
     maxXTicks = popset('maxXTicks')
     maxYTicks = popset('maxYTicks')
+    plotargs = popset('plotargs',{})
+    twinplotargs = copy.deepcopy(plotargs).update(popset('twinplotargs')
 
     # extracting drawing instructions
     plotRe = re.compile(r'(y[12]?)(x[12]?)?')
@@ -112,19 +114,18 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1, targets=[]):
         lines = []
         linelabels = []
         for recipe in recipes:
-            opts = {}
             data = []
             for i,v in enumerate(recipe):
                 if isinstance(v,dict):
                     try: linelabels.append(v.pop('label'))
                     except KeyError: pass
-                    opts.update(v)
+                    plotargs.update(v)
                 elif isinstance(v,str):
                     data.extend(instructEval.instructEval(src,v))
                 else:
                     raise ValueError('Could not parse %s'%v)
             for p in plots:
-                lines.append(p.plot(*data,**opts))
+                lines.append(p.plot(*data,**plotargs))
         return lines,linelabels
 
     # if we have breaks, come up with a new figure, no way to save the old one -
