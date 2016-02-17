@@ -3,9 +3,8 @@
 
 #import inputfilter, helpers, operations
 import sys,os.path,re
-sys.path.insert(0,os.path.join(os.path.abspath(os.path.dirname(__file__)),'..'))
 import yaml
-import matplotlib.pyplot as plt
+sys.path.insert(0,os.path.join(os.path.abspath(os.path.dirname(__file__)),'..'))
 from plotter import yamlplot
 
 # load recipe
