@@ -7,16 +7,21 @@ try:
     from . import inputfilter
     from .operations import operations,instructEval
     from .subplots2 import subplots2
+    from . import helpers
 
 except SystemError:
     from packagedefaults import packagedefaults as pdefaults
     from XpyY import inputfilter
     from XpyY.operations import operations,instructEval
     from XpyY.subplots2 import subplots2
+    from XpyY import helpers
+
 import re, numbers, numpy, copy, sys
 from matplotlib import pyplot,transforms,text
 import pdb
 import time
+
+figs = []
 
 def yamlplot(recipes):
     '''plot src[] to dest using recipes
@@ -75,25 +80,12 @@ figurekwargs are passed to figure() call, same for legendopts, plotkwargs, opera
         defaults = {}
 
     for y in recipes:
+        fig = pyplot.figure()
+        figs.append(fig)
         if isinstance(y, dict):
-            try: figsize = y.pop('figsize')
-            except KeyError:
-                try: figsize = defaults['figsize']
-                except KeyError: fig = pyplotfigure()
-                else: fig = pyplot.figure(figsize=[d/25.4 for d in figsize])
-            else: fig = pyplot.figure(figsize=[d/25.4 for d in figsize])
             plot(y,fig, defaults)
 
         elif isinstance(y, list):
-
-            # deal with figsize as first list item
-            try:
-                xdim,ydim = map(helper.inchesmm,y[0])
-            except (TypeError,ValueError):
-                fig = pyplot.figure()
-            else:
-                fig = pyplot.figure(figsize=(xdim,ydim))
-                y.pop(0)
 
             ylen = len(y)
             for ypos,x in enumerate(y):
@@ -114,21 +106,20 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     packagedefaults = copy.deepcopy(pdefaults)
     defaults = copy.deepcopy(defaults)
 
+    packagedefaults.update(defaults)
+    packagedefaults.update(recipe)
+    recipe = packagedefaults
+
     def popset(key, default=None, *altnames):
         '''returns key from either recipe, defaults or packagedefaults
         key is popped from dic with given default'''
         v = default
 
-        if any( isinstance(i.get(key,None),dict) for i in (packagedefaults, defaults, recipe) ) \
-                or isinstance(default,dict):
+        if any( isinstance(i,dict) for i in (recipe.get(key,None), default) ):
             if default == None:
                 v = {}
-            v.update(packagedefaults.pop(key,{}))
-            v.update(defaults.pop(key,{}))
             v.update(recipe.pop(key,{}))
         else:
-            v = packagedefaults.pop(key,v)
-            v = defaults.pop(key,v)
             v = recipe.pop(key,v)
         #if not v:
         #    raise KeyError('%s not found in any of packagedefaults,defaults,recipe'%key)
@@ -148,6 +139,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     target = popset('targetprefix')+target
 
     # extract recipe keys that are not plot args
+    figsize = popset('figsize')
     subplotopts = popset('opts',{})
     xbreaks = popset('xbreaks',[None]) # have to have something inside b/c later iterate over
     ybreaks = popset('ybreaks',[None])
@@ -168,6 +160,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     y1x1,y2x1,y1x2,y2x2 = [],[],[],[]
     linelabels = []
     pop=[] #: need to delete drawing instructions from recipe
+
     for k in recipe:
         try:
             y,x = plotRe.match(k).groups() # x may be None
@@ -197,23 +190,33 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
             for k,v in dmap.items():
                 src[k] = eval(v,{k:src[k]},operations)
 
-    def subplot(recipes, *plots):
+    def subplot(recipes, *plots, **plotargs):
         '''plot the recipe on all *plots - this is like pyplot.plot, not subplots2'''
         lines = []
         linelabels = []
         for recipe in recipes:
             data = []
             for i,v in enumerate(recipe):
+                ilabel = plotargs.get('label', None)
                 if isinstance(v,dict):
-                    try: linelabels.append(v.pop('label'))
-                    except KeyError: pass
+                    ilabel = v.pop('label', ilabel)
                     plotargs.update(v)
                 elif isinstance(v,str):
                     data.extend(instructEval.instructEval(src,v))
+                    # FIXME: if this provides data for several plots, then linelabel must be repeated
                 else:
                     raise ValueError('Could not parse %s'%v)
+
+            if ilabel != None:
+                linelabels.append(ilabel)
+
             for p in plots:
+                # these may be several lines, must ensure if there are several
+                # that labels is None or list of same length
                 lines.append(p.plot(*data,**plotargs))
+
+        # if len(linelabels)>0 and len(linelabels) != len(lines):
+        #    raise ValueError("You provided Linelabels and not for every line one")
         return lines,linelabels
 
     # if we have breaks, come up with a new figure, no way to save the old one -
@@ -227,17 +230,20 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
 
         elif y2x1:
             axs, bgax, twinaxs, bgtwin = subplots2(fig, twin='x', **subplots2args)
-            (bgtwinlines, *twinlines),twinlinelabels = subplot(y2x1, bgtwin, *twinaxs.flat)
+#            (bgtwinlines, *twinlines),(bgtwinlinelabels, *twinlinelabels) \
+#                = subplot(y2x1, bgtwin, *twinaxs.flat, **twinplotargs)
+            (bgtwinlines, *twinlines),bgtwinlinelabels = subplot(y2x1, bgtwin, *twinaxs.flat, **twinplotargs)
             # above for some reasons produces a list arround what we want, therefore:
             if labels[3]: bgtwin.set_ylabel(labels[3])
 
         elif y1x2:
             axs, bgax, twinaxs, bgtwin = subplots2(fig,twin='y', **subplots2args)
-            (bgtwinlines, *twinlines),twinlinelabels = subplot(y1x2, bgtwin, *twinaxs.flat)
+            (bgtwinlines, *twinlines), bgtwinlinelabels = subplot(y1x2, bgtwin, *twinaxs.flat, **twinplotargs)
             if labels[2]: bgtwin.set_xlabel(labels[2])
 
-        (bglines, *lines),linelabels = subplot(y1x1, bgax, *axs.flat)
-        legend = fig.legend(bglines+bgtwinlines,linelabels+twinlinelabels,**legendopts)
+        #(bglines, *lines),(bglinelabels, *linelabels) = subplot(y1x1, bgax, *axs.flat, **plotargs)
+        (bglines, *lines), bglinelabels = subplot(y1x1, bgax, *axs.flat, **plotargs)
+        legend = fig.legend(bglines+bgtwinlines,bglinelabels+bgtwinlinelabels,**legendopts)
         legend.set_zorder(20)
         legend.set_bbox_to_anchor(legendpos,bgax.transAxes)
 
@@ -277,5 +283,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
             raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
         p11.legend(lines,linelabels,**legendopts)
 
+    if figsize:
+        fig.set_size_inches(helpers.inchesmm(*figsize))
     fig.savefig(target,format=outformat,bbox_inches='tight')
     return fig
