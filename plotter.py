@@ -177,6 +177,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
                 else: y1x1.append(p)
     for i in map(recipe.pop,pop): pass
 
+    print('working on target %s'%target)
     if isinstance(src,dict):
         src = { k: inputfilter.__call__( srcprefix+v ) for k,v in src.items() }
     elif isinstance(src,str):
@@ -184,9 +185,12 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
 
     dmap = popset('dmap')
     if dmap:
+
         if isinstance(src,numpy.ndarray):
-            src = eval(dmap,{'src':src},operations)
-        else:
+            dmaplocals = instructEval.LetterColsFromArray(src)
+            dmaplocals.update(src=src)
+            src = numpy.array(eval(dmap,dmaplocals,operations))
+        elif isinstance(src,dict):
             for k,v in dmap.items():
                 src[k] = eval(v,{k:src[k]},operations)
 
@@ -257,6 +261,13 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         for l in bgax.get_xticklabels() + bgax.get_yticklabels() + \
                   bgtwin.get_xticklabels() + bgtwin.get_yticklabels():
             l.set_alpha(0.0)
+
+        for line,label in zip(bglines+twinbglines,bglinelabels+bgtwinlinelabels):
+            print('made line with label %s'%label)
+        linecount = len(bglines+twinbglines)
+        labelcount = len(bglinelabels+bgtwinlinelabels)
+        if linecount != labelcount:
+            print("len(lines)=%i != len(labels)=%i"%(linecount,labelcount))
 
     else:
         # y1x1 plots
