@@ -151,6 +151,10 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     legendpos = popset('legendpos',(0,1))
     maxXTicks = popset('maxXTicks')
     maxYTicks = popset('maxYTicks')
+    xlim = popset('xlim')
+    twinxlim = popset('twinxlim')
+    ylim = popset('ylim')
+    twinylim = popset('twinylim')
     plotargs = popset('plotargs',{})
     twinplotargs = popset('twinplotargs',copy.deepcopy(plotargs))
 
@@ -275,10 +279,13 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         lines.extend(subplot(y1x1,p11))
         if labels[0]: p11.set_xlabel(labels[0])
         if labels[1]: p11.set_ylabel(labels[1])
+        if xlim: p11.set_xlim(xlim)
+        if ylim: p11.set_ylim(ylim)
 
         if y2x1:
             p21 = p11.twinx()
             lines.extend(subplot(y2x1,p21))
+            if twinylim: p21.set_ylim(twinylim)
             try: labels[3]
             except IndexError: pass
             else: p21.set_ylabel(labels[3])
@@ -286,6 +293,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         if y1x2:
             p12 = p11.twiny()
             lines.extend(subplot(y1x2,p12))
+            if twinxlim: p12.set_xlim(twinxlim)
             try: labels[2]
             except IndexError: pass
             else: p12.set_xlabel(labels[2])
