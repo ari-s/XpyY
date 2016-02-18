@@ -128,13 +128,13 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     target = recipe.pop('target') # no default for target
     # parse target, if not shorthand notation extract axlabels
     if isinstance(target,list):
-        labels = target[2:]
+        axlabels = target[2:]
         target,caption = target[:2]
     else:
-        labels = list(map(popset,('xlabel','ylabel'),('x1label','y1label')))
+        axlabels = list(map(popset,('xlabel','ylabel'),('x1label','y1label')))
     # need space as default second label b/c to differ subplot call from first axis
     # this will break for ylabel,xlabel = ' '
-    labels.extend(map(popset,('x2label', 'y2label'), (' ',' ')))
+    axlabels.extend(map(popset,('x2label', 'y2label'), ('','')))
 
     target = popset('targetprefix')+target
 
@@ -204,24 +204,25 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         linelabels = []
         for recipe in recipes:
             data = []
+            ilines = []
+            ilabel = plotargs.get('label', None)
             for i,v in enumerate(recipe):
-                ilabel = plotargs.get('label', None)
                 if isinstance(v,dict):
                     ilabel = v.pop('label', ilabel)
                     plotargs.update(v)
                 elif isinstance(v,str):
                     data.extend(instructEval.instructEval(src,v))
-                    # FIXME: if this provides data for several plots, then linelabel must be repeated
                 else:
                     raise ValueError('Could not parse %s'%v)
-
-            if ilabel != None:
-                linelabels.append(ilabel)
 
             for p in plots:
                 # these may be several lines, must ensure if there are several
                 # that labels is None or list of same length
-                lines.append(p.plot(*data,**plotargs))
+                ilines.append(p.plot(*data,**plotargs))
+            # ilines is now in ilines[plots][lineno] "shape", transpose
+            lines.append(list(zip(*ilines)))
+            if ilabel != None:
+                linelabels.append([ilabel]*len(ilines[0]))
 
         # if len(linelabels)>0 and len(linelabels) != len(lines):
         #    raise ValueError("You provided Linelabels and not for every line one")
@@ -232,44 +233,60 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     subplots2args = dict(xbreaks=xbreaks, ybreaks=ybreaks, maxXTicks=maxXTicks, maxYTicks=maxYTicks)
     if xbreaks[0] or ybreaks[0]:
 
+        def subplotbreaks(fig,*plots,**plotargs):
+            '''wrapper around subplot that sorts out the lines and labels returned by subplot
+               due to the numerus helper plots'''
+
+            # lines will hold one list per recipe with one line per plot, need item 0 of those
+            # labels will hold one list per recipe with ^linecount - need all of them
+
+            lines, labels = subplot(fig, *plots, **plotargs)
+            pdb.set_trace()
+            lines = [ i[0] for recipe in lines for i in recipe ]
+            labels = [ i for recipe in labels for i in recipe ]
+            for line in lines:
+                # these are in background, with recipes[0] above discarded references to the actual ones
+                line.set_visible(False)
+            print(lines)
+            print(labels)
+            return lines, labels
+
         if not ( y2x1 or y1x2 ):
             axs,bgax = subplots2(fig, **subplots2args)
-            bgtwinlines = [] # so we can do legend call independend on the others existence
+            twinlines = [] # so we can do legend call independend on the others existence
 
         elif y2x1:
             axs, bgax, twinaxs, bgtwin = subplots2(fig, twin='x', **subplots2args)
 #            (bgtwinlines, *twinlines),(bgtwinlinelabels, *twinlinelabels) \
 #                = subplot(y2x1, bgtwin, *twinaxs.flat, **twinplotargs)
-            (bgtwinlines, *twinlines),bgtwinlinelabels = subplot(y2x1, bgtwin, *twinaxs.flat, **twinplotargs)
+            twinlines, twinlinelabels = subplotbreaks(y2x1, bgtwin, *twinaxs.flat, **twinplotargs)
             # above for some reasons produces a list arround what we want, therefore:
-            if labels[3]: bgtwin.set_ylabel(labels[3])
+            if axlabels[3]: bgtwin.set_ylabel(axlabels[3])
 
         elif y1x2:
             axs, bgax, twinaxs, bgtwin = subplots2(fig,twin='y', **subplots2args)
-            (bgtwinlines, *twinlines), bgtwinlinelabels = subplot(y1x2, bgtwin, *twinaxs.flat, **twinplotargs)
-            if labels[2]: bgtwin.set_xlabel(labels[2])
+            twinlines, twinlinelabels = subplotbreaks(y1x2, bgtwin, *twinaxs.flat, **twinplotargs)
+            if axlabels[2]: bgtwin.set_xlabel(axabels[2])
 
         #(bglines, *lines),(bglinelabels, *linelabels) = subplot(y1x1, bgax, *axs.flat, **plotargs)
-        (bglines, *lines), bglinelabels = subplot(y1x1, bgax, *axs.flat, **plotargs)
-        legend = fig.legend(bglines+bgtwinlines,bglinelabels+bgtwinlinelabels,**legendopts)
+        lines, linelabels = subplotbreaks(y1x1, bgax, *axs.flat, **plotargs)
+        legend = fig.legend(lines+twinlines,linelabels+twinlinelabels,**legendopts)
         legend.set_zorder(20)
         legend.set_bbox_to_anchor(legendpos,bgax.transAxes)
-
-        for line in bglines + bgtwinlines:
-            line.set_visible(False)
+        pdb.set_trace()
 
         # print the labels onto the bgax
-        if labels[0] or labels[1]:
-            if labels[0]: bgax.set_xlabel(labels[0])
-            if labels[1]: bgax.set_ylabel(labels[1])
+        if axlabels[0] or axlabels[1]:
+            if axlabels[0]: bgax.set_xlabel(axlabels[0])
+            if axlabels[1]: bgax.set_ylabel(axlabels[1])
         for l in bgax.get_xticklabels() + bgax.get_yticklabels() + \
                   bgtwin.get_xticklabels() + bgtwin.get_yticklabels():
             l.set_alpha(0.0)
 
-        for line,label in zip(bglines+bgtwinlines,bglinelabels+bgtwinlinelabels):
+        for line,label in zip(lines+twinlines,linelabels+twinlinelabels):
             print('made line with label %s'%label)
-        linecount = len(bglines+bgtwinlines)
-        labelcount = len(bglinelabels+bgtwinlinelabels)
+        linecount = len(lines+twinlines)
+        labelcount = len(linelabels+twinlinelabels)
         if linecount != labelcount:
             print("len(lines)=%i != len(labels)=%i"%(linecount,labelcount))
 
@@ -277,32 +294,32 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         # y1x1 plots
         p11 = fig.add_subplot(*plotpos,**subplotopts)
         line,linelabel = subplot(y1x1,p11,**plotargs)
-        lines.extend(line[0])
-        linelabels.extend(linelabel)
-        if labels[0]: p11.set_xlabel(labels[0])
-        if labels[1]: p11.set_ylabel(labels[1])
+        lines.extend( i[0] for recipe in line for i in recipe )
+        linelabels.extend( i for recipe in linelabel for i in recipe )
+        if axlabels[0]: p11.set_xlabel(axlabels[0])
+        if axlabels[1]: p11.set_ylabel(axlabels[1])
         if xlim: p11.set_xlim(xlim)
         if ylim: p11.set_ylim(ylim)
 
         if y2x1:
             p21 = p11.twinx()
             line,linelabel = subplot(y2x1,p21,**twinplotargs)
-            lines.extend(line[0])
-            linelabels.extend(linelabel)
+            lines.extend( i[0] for recipe in line for i in recipe )
+            linelabels.extend( i for recipe in linelabel for i in recipe )
             if twinylim: p21.set_ylim(twinylim)
-            try: labels[3]
+            try: axlabels[3]
             except IndexError: pass
-            else: p21.set_ylabel(labels[3])
+            else: p21.set_ylabel(axlabels[3])
 
         if y1x2:
             p12 = p11.twiny()
             line,linelabel = subplot(y1xx,p12,**twinplotargs)
-            lines.extend(line[0])
-            linelabels.extend(linelabel)
+            lines.extend( i[0] for recipe in line for i in recipe )
+            linelabels.extend( i for recipe in linelabel for i in recipe )
             if twinxlim: p12.set_xlim(twinxlim)
-            try: labels[2]
+            try: axlabels[2]
             except IndexError: pass
-            else: p12.set_xlabel(labels[2])
+            else: p12.set_xlabel(axlabels[2])
 
         if y2x2:
             raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
