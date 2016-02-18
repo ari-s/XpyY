@@ -266,9 +266,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
                   bgtwin.get_xticklabels() + bgtwin.get_yticklabels():
             l.set_alpha(0.0)
 
-        for line,label in zip(bglines+twinbglines,bglinelabels+bgtwinlinelabels):
+        for line,label in zip(bglines+bgtwinlines,bglinelabels+bgtwinlinelabels):
             print('made line with label %s'%label)
-        linecount = len(bglines+twinbglines)
+        linecount = len(bglines+bgtwinlines)
         labelcount = len(bglinelabels+bgtwinlinelabels)
         if linecount != labelcount:
             print("len(lines)=%i != len(labels)=%i"%(linecount,labelcount))
@@ -276,7 +276,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     else:
         # y1x1 plots
         p11 = fig.add_subplot(*plotpos,**subplotopts)
-        lines.extend(subplot(y1x1,p11))
+        line,linelabel = subplot(y1x1,p11,**plotargs)
+        lines.extend(line[0])
+        linelabels.extend(linelabel)
         if labels[0]: p11.set_xlabel(labels[0])
         if labels[1]: p11.set_ylabel(labels[1])
         if xlim: p11.set_xlim(xlim)
@@ -284,7 +286,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
 
         if y2x1:
             p21 = p11.twinx()
-            lines.extend(subplot(y2x1,p21))
+            line,linelabel = subplot(y2x1,p21,**twinplotargs)
+            lines.extend(line[0])
+            linelabels.extend(linelabel)
             if twinylim: p21.set_ylim(twinylim)
             try: labels[3]
             except IndexError: pass
@@ -292,7 +296,9 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
 
         if y1x2:
             p12 = p11.twiny()
-            lines.extend(subplot(y1x2,p12))
+            line,linelabel = subplot(y1xx,p12,**twinplotargs)
+            lines.extend(line[0])
+            linelabels.extend(linelabel)
             if twinxlim: p12.set_xlim(twinxlim)
             try: labels[2]
             except IndexError: pass
@@ -305,4 +311,5 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     if figsize:
         fig.set_size_inches(helpers.inchesmm(*figsize))
     fig.savefig(target,format=outformat,bbox_inches='tight')
+    print('done\n')
     return fig
