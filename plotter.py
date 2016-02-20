@@ -129,7 +129,14 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         if any( isinstance(i,dict) for i in (recipe.get(key,None), default) ):
             if default == None:
                 v = {}
-            v.update(recipe.pop(key,{}))
+            def update(d1,d2):
+                for k,v in d2.items():
+                    if isinstance(v,dict) and k in d1 and isinstance(d1[k],dict):
+                        update(d1[k],d2[k])
+                    else:
+                        d1[k] = d2[k]
+
+            update(v,recipe.pop(key,{}))
         else:
             v = recipe.pop(key,v)
         #if not v:
@@ -252,14 +259,12 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
             # labels will hold one list per recipe with ^linecount - need all of them
 
             lines, labels = subplot(fig, *plots, **plotargs)
-            pdb.set_trace()
-            lines = [ i[0] for recipe in lines for i in recipe ]
+            bglines = [ i[0] for recipe in lines for i in recipe ]
+            lines = [ i[1] for recipe in lines for i in recipe ]
             labels = [ i for recipe in labels for i in recipe ]
-            for line in lines:
+            for line in bglines:
                 # these are in background, with recipes[0] above discarded references to the actual ones
                 line.set_visible(False)
-            print(lines)
-            print(labels)
             return lines, labels
 
         if not ( y2x1 or y1x2 ):
