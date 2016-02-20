@@ -1,5 +1,5 @@
 import numpy
-from . import strptime,dmap
+from . import *
 def unsparse(data, relativeTo=0, dtype=float,relFunc=1, otherFunc=1):
     '''from a sparse data set (i.e. one which has one column with all entries present,
     others that are relative to the non-sparse one (like time->measuremnt maps))
