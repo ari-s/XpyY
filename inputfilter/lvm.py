@@ -4,7 +4,7 @@ import numpy,hashlib,appdirs,os.path,os
 from .. import helpers
 import re
 
-cacheDir = appdirs.user_cache_dir('plot',appauthor='Arian Sanusi')
+cacheDir = appdirs.user_cache_dir('XpyY',appauthor='Arian Sanusi')
 try: os.mkdir(cacheDir)
 except FileExistsError: pass
 digitre=re.compile(rb'\d')
@@ -29,16 +29,20 @@ def parse(infile):
 
     # will not be reached if loaded from cache
     infile.seek(0)
+    chanCount=0
     for line in infile:
         try: chanCount = int(re.search(b'Channels\t(\d+)',line).group(1))
-        except AttributeError: pass
+        except AttributeError: chanCount = max((chanCount, len(line.split(b'\t'))-1))
         else: break
+    infile.seek(0) # we may have consumed the whole infile befor for chanCount
     result = []
     for line in infile:
         if digitre.match(line):
             result.extend(map(float,line.split(b'\t')))
     result = numpy.array(result)
+    #import pdb; pdb.set_trace()
     result.shape = (-1,chanCount+1) # WTF, why does assigning change shape
+    result = result.transpose()
     try:numpy.save(open(cache,'wb'),result)
     except NameError: pass
-    return result.transpose()
+    return result
