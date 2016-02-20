@@ -72,6 +72,7 @@ figurekwargs are passed to figure() call, same for legendopts, plotkwargs, opera
     #if not set(('src','target','y','y1','y2','yx','y1x','y1x1','y2x','y2x1','y2x2')).intersection(recipes[0]):
     if not set(('target')).intersection(recipes[0]):
         defaults = recipes.pop(0)
+        defaults.pop('anchors',None)
         # rcparams must be set before any matplotlib interaction...
         fontsize = defaults.pop('fontsize',None)
         if fontsize:
@@ -150,16 +151,12 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         axlabels = target[2:]
         target,caption = target[:2]
     else:
-        axlabels = list(map(popset,('xlabel','ylabel'),('x1label','y1label')))
-    # need space as default second label b/c to differ subplot call from first axis
-    # this will break for ylabel,xlabel = ' '
-    axlabels.extend(map(popset,('x2label', 'y2label'), ('','')))
+        axlabels = [ popset(i) for i in ('xlabel','ylabel', 'twinaxlabel') ]
 
     target = popset('targetprefix')+target
 
     # extract recipe keys that are not plot args
     figsize = popset('figsize')
-    subplotopts = popset('opts',{})
     xbreaks = popset('xbreaks',[None]) # have to have something inside b/c later iterate over
     ybreaks = popset('ybreaks',[None])
     src = popset('src')
@@ -171,8 +168,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     maxXTicks = popset('maxXTicks')
     maxYTicks = popset('maxYTicks')
     xlim = popset('xlim')
-    twinxlim = popset('twinxlim')
     ylim = popset('ylim')
+    twinxlim = popset('twinxlim')
     twinylim = popset('twinylim')
     plotargs = popset('plotargs',{})
     twinplotargs = popset('twinplotargs',copy.deepcopy(plotargs))
@@ -202,15 +199,18 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
                 else: y1x1.append(p)
     for i in map(recipe.pop,pop): pass
 
+    dmap = popset('dmap')
+
+    # done with parsing
+    print("remaining", recipe)
+
     print('working on target %s'%target)
     if isinstance(src,dict):
         src = { k: inputfilter.__call__( srcprefix+v ) for k,v in src.items() }
     elif isinstance(src,str):
         src = inputfilter.__call__( srcprefix+src )
 
-    dmap = popset('dmap')
     if dmap:
-
         if isinstance(src,numpy.ndarray):
             dmaplocals = instructEval.LetterColsFromArray(src)
             dmaplocals.update(src=src)
@@ -218,6 +218,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         elif isinstance(src,dict):
             for k,v in dmap.items():
                 src[k] = eval(v,{k:src[k]},operations)
+        else:
+            raise TypeError()
 
     def subplot(recipes, *plots, **plotargs):
         '''plot the recipe on all *plots - this is like pyplot.plot, not subplots2'''
@@ -251,7 +253,12 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
 
     # if we have breaks, come up with a new figure, no way to save the old one -
     # incompatible with more than one plot per figure
-    subplots2args = dict(xbreaks=xbreaks, ybreaks=ybreaks, maxXTicks=maxXTicks, maxYTicks=maxYTicks)
+    subplots2args = dict(
+        xbreaks=xbreaks, ybreaks=ybreaks,
+        maxXTicks=maxXTicks, maxYTicks=maxYTicks,
+        xlim=xlim, ylim=ylim,
+        twinxlim=twinxlim, twinylim=twinylim)
+
     if xbreaks[0] or ybreaks[0]:
 
         def subplotbreaks(fig,*plots,**plotargs):
@@ -280,7 +287,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
 #                = subplot(y2x1, bgtwin, *twinaxs.flat, **twinplotargs)
             twinlines, twinlinelabels = subplotbreaks(y2x1, bgtwin, *twinaxs.flat, **twinplotargs)
             # above for some reasons produces a list arround what we want, therefore:
-            if axlabels[3]: bgtwin.set_ylabel(axlabels[3])
+            if axlabels[2]: bgtwin.set_ylabel(axlabels[2])
 
         elif y1x2:
             axs, bgax, twinaxs, bgtwin = subplots2(fig,twin='y', **subplots2args)
@@ -312,7 +319,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
 
     else:
         # y1x1 plots
-        p11 = fig.add_subplot(*plotpos,**subplotopts)
+        p11 = fig.add_subplot(*plotpos)
         line,linelabel = subplot(y1x1,p11,**plotargs)
         lines.extend( i[0] for recipe in line for i in recipe )
         linelabels.extend( i for recipe in linelabel for i in recipe )

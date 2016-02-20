@@ -35,6 +35,9 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
     except TypeError: height = [ 1 ]
     else: width/=sum(width)
 
+    xlim,ylim,twinxlim,twinylim = ( plotopts.pop(i,None) for i in
+                                    ( 'xlim','ylim','twinxlim','twinylim' ) )
+
     gridspec = pyplot.GridSpec(
         nrows=len(ybreaks), ncols=len(xbreaks), width_ratios=width, height_ratios=height,
         wspace=0.015*len(xbreaks), hspace=0.015*len(ybreaks)) # wspace is _w_ertical, hspace horizontal.
@@ -51,8 +54,10 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
             ax = subplot((j,i),**plotopts)
             axs[j,i] = ax
 
-            if x: ax.set_xlim(x)  # may have None-case
-            if y: ax.set_ylim(y)  # dito
+            if x: ax.set_xlim(x)            # may have None-case
+            elif xlim: ax.set_xlim(xlim)    # if x axis unbroken, may have xlim set
+            if y: ax.set_ylim(y)            # dito
+            elif ylim: ax.set_ylim(ylim)
 
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
@@ -70,8 +75,10 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
                 twinax.get_yaxis().set_visible(False)
                 for side in ('top','bottom','left','right'):
                     twinax.spines[side].set_visible(False)
-                if x: twinax.set_xlim(x)  # may have None-case
-                if y: twinax.set_ylim(y)  # dito
+                if x: twinax.set_xlim(x)                    # may have None-case
+                elif twinxlim: twinax.set_xlim(twinxlim)    # can have lim on non-broken axes
+                if y: twinax.set_ylim(y)                    # dito
+                elif twinylim: twinax.set_ylim(twinylim)
                 twinaxs[j,i] = twinax
 
                 # change ticklabels
@@ -89,7 +96,7 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
             twinaxs[0,i].get_xaxis().set_visible(True)
             twinaxs[0,i].get_shared_y_axes().join(*twinaxs[:,i])
             bgtwin = bgax.twiny()
-
+            if twinxlim: bgtwin.set_xlim(twinxlim)
         # now the break significant:
         c=.006
         d=c/width[i]
@@ -111,6 +118,7 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
             twinaxs[j,-1].get_yaxis().set_visible(True)
             twinaxs[j,-1].get_shared_x_axes().join(*twinaxs[j,:])
             bgtwin = bgax.twinx()
+            if twinylim: bgtwin.set_ylim(twinylim)
                 # now the break significant:
 
         d=.015
@@ -125,7 +133,6 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
     if twin:
         for side in ('top','bottom','left','right'):
             bgtwin.spines[side].set_visible(False)
-
     # return signature deliberately different, make sure callee does what he intended
     if twin: return axs, bgax, twinaxs, bgtwin
     else: return axs, bgax
