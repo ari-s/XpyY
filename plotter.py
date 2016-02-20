@@ -306,6 +306,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
             line,linelabel = subplot(y2x1,p21,**twinplotargs)
             lines.extend( i[0] for recipe in line for i in recipe )
             linelabels.extend( i for recipe in linelabel for i in recipe )
+            if xlim: p21.set_xlim(xlim) # apparently this needs to be set on both axes
             if twinylim: p21.set_ylim(twinylim)
             try: axlabels[3]
             except IndexError: pass
@@ -316,6 +317,7 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
             line,linelabel = subplot(y1xx,p12,**twinplotargs)
             lines.extend( i[0] for recipe in line for i in recipe )
             linelabels.extend( i for recipe in linelabel for i in recipe )
+            if ylim: p12.set_ylim(ylim)
             if twinxlim: p12.set_xlim(twinxlim)
             try: axlabels[2]
             except IndexError: pass
@@ -324,6 +326,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         if y2x2:
             raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
         p11.legend(lines,linelabels,**legendopts)
+        if axlabels[0]: p11.set_xlabel(axlabels[0])
+        if axlabels[1]: p11.set_ylabel(axlabels[1])
 
     if figsize:
         fig.set_size_inches(helpers.inchesmm(*figsize))
