@@ -117,8 +117,15 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     packagedefaults = copy.deepcopy(pdefaults)
     defaults = copy.deepcopy(defaults)
 
-    packagedefaults.update(defaults)
-    packagedefaults.update(recipe)
+    def update(d1,d2):
+        for k,v in d2.items():
+            if isinstance(v,dict) and k in d1 and isinstance(d1[k],dict):
+                update(d1[k],d2[k])
+            else:
+                d1[k] = d2[k]
+
+    update(packagedefaults,defaults)
+    update(packagedefaults,recipe)
     recipe = packagedefaults
 
     def popset(key, default=None, *altnames):
@@ -129,12 +136,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         if any( isinstance(i,dict) for i in (recipe.get(key,None), default) ):
             if default == None:
                 v = {}
-            def update(d1,d2):
-                for k,v in d2.items():
-                    if isinstance(v,dict) and k in d1 and isinstance(d1[k],dict):
-                        update(d1[k],d2[k])
-                    else:
-                        d1[k] = d2[k]
 
             update(v,recipe.pop(key,{}))
         else:
