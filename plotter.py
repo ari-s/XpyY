@@ -175,6 +175,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     twinylim = popset('twinylim')
     plotargs = popset('plotargs',{})
     twinplotargs = popset('twinplotargs',copy.deepcopy(plotargs))
+    legendlinestyle = popset('legendlinestyle')
+    twinlegendlinestyle = popset('twinlegendlinestyle',legendlinestyle)
 
     # extracting drawing instructions
     plotRe = re.compile(r'(y[12]?)(x[12]?)?')
@@ -291,7 +293,6 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
         legend = fig.legend(lines+twinlines,linelabels+twinlinelabels,**legendopts)
         legend.set_zorder(20)
         legend.set_bbox_to_anchor(legendpos,bgax.transAxes)
-        pdb.set_trace()
 
         # print the labels onto the bgax
         if axlabels[0] or axlabels[1]:
