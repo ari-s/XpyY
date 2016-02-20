@@ -99,6 +99,17 @@ figurekwargs are passed to figure() call, same for legendopts, plotkwargs, opera
         else:
             raise ValueError('first depth item in yaml must be list or dict')
 
+def linesModStyle(linestyle,lines):
+    if linestyle == None: return lines
+    else:
+        newlines = []
+        for line in lines:
+            axn = line.axes
+            x = line.get_xdata()[0]
+            y = line.get_ydata()[0]
+            newlines.extend( axn.plot((x,x),(y,y),color=line.get_color(),linestyle=linestyle) )
+        return newlines
+
 def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
     '''plots on fig from one recipe (as python dictionary) as described in __main__.__doc__'''
 
@@ -270,6 +281,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
 
         #(bglines, *lines),(bglinelabels, *linelabels) = subplot(y1x1, bgax, *axs.flat, **plotargs)
         lines, linelabels = subplotbreaks(y1x1, bgax, *axs.flat, **plotargs)
+        lines = linesModStyle(legendlinestyle,lines)
+        twinlines = linesModStyle(twinlegendlinestyle,twinlines)
         legend = fig.legend(lines+twinlines,linelabels+twinlinelabels,**legendopts)
         legend.set_zorder(20)
         legend.set_bbox_to_anchor(legendpos,bgax.transAxes)
@@ -325,6 +338,8 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
 
         if y2x2:
             raise NotImplementedError('Could not figure out how to handle reasonably in pyplot')
+
+        lines = linesModStyle(legendlinestyle,lines)
         p11.legend(lines,linelabels,**legendopts)
         if axlabels[0]: p11.set_xlabel(axlabels[0])
         if axlabels[1]: p11.set_ylabel(axlabels[1])
