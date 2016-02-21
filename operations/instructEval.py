@@ -28,11 +28,11 @@ def instructEval(data, instructions):
     if isinstance(data,numpy.ndarray):
         datadict = LetterColsFromArray(data)
     elif isinstance(data,dict):
-        datadict = {}
-        for k,d in data.items():
-            idDict = LetterColsFromArray(d)
-            dataMapping = collections.namedtuple('dataMapping',idDict.keys())
-            datadict[k] = dataMapping(**idDict)
+        datadict = data
+        #for k,d in data.items():
+            #idDict = LetterColsFromArray(d)
+            #dataMapping = collections.namedtuple('dataMapping',idDict.keys())
+            #datadict[k] = dataMapping(**idDict)
     else: raise TypeError( "Can't handle data type %s"%(type(data)) )
 
     return eval(instructions,operations,datadict)

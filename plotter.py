@@ -217,9 +217,12 @@ def plot(recipe,fig,defaults,xlen=1,ylen=1,xpos=1,ypos=1):
             src = numpy.array(eval(dmap,dmaplocals,operations))
         elif isinstance(src,dict):
             for k,v in dmap.items():
-                src[k] = eval(v,{k:src[k]},operations)
+                dmaplocals = instructEval.LetterColsFromArray(src[k])
+                dmaplocals.update(src=src[k])
+                src[k] = eval(v,dmaplocals,operations)
         else:
             raise TypeError()
+
 
     def subplot(recipes, *plots, **plotargs):
         '''plot the recipe on all *plots - this is like pyplot.plot, not subplots2'''
