@@ -133,6 +133,15 @@ def subplots2(fig,xbreaks,ybreaks,twin=None,maxXTicks=None,maxYTicks=None,**plot
     if twin:
         for side in ('top','bottom','left','right'):
             bgtwin.spines[side].set_visible(False)
+
+    if not xbreaks and xlim:
+        bgax.set_xlim(xlim)
+        if twin: bgtwin.set_xlim(xlim)
+    if not ybreaks and ylim:
+        bgax.set_ylim(ylim)
+        if twin: bgtwin.set_ylim(ylim)
+
+
     # return signature deliberately different, make sure callee does what he intended
     if twin: return axs, bgax, twinaxs, bgtwin
     else: return axs, bgax
